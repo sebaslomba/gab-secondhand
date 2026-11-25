@@ -1,0 +1,48 @@
+export type Estado = "av" | "ho" | "so";
+export type Prenda = {
+  id: string; t: string; b: string; s: string; p: number; c: string;
+  g: "tee" | "dress" | "jeans" | "jacket" | "skirt" | "sweater";
+  col: string; bg: string; st: Estado; cond: string; cost: number;
+};
+
+export const WHATSAPP = "595972217237";
+export const WHATSAPP_LABEL = "+595 972 217 237";
+export const INSTAGRAM = "https://www.instagram.com/gab_secondhand";
+export const TIKTOK = "https://www.tiktok.com/@gabsecondhand";
+// Minutos que dura una reserva hecha por la web (Sebas pidió entre 10 y 20).
+export const RESERVA_MIN = 15;
+export const ALIAS = { alias: "gab.secondhand", titular: "A definir", banco: "A definir" };
+
+export const CATEGORIAS = ["Todo", "Remeras", "Vestidos", "Pantalones", "Polleras", "Abrigos"];
+export const TALLES = ["XS", "S", "M", "L", "38", "40"];
+export const ESTADO_LABEL: Record<Estado, [string, string]> = {
+  av: ["Disponible", ""], ho: ["Reservada", "hold"], so: ["Vendida", "sold"],
+};
+
+// Datos de ejemplo hasta conectar la base de datos (etapa 1).
+export const PRENDAS: Prenda[] = [
+  { id: "GS-101", t: "Campera de jean oversize", b: "Levi's", s: "M", p: 120000, c: "Abrigos", g: "jacket", col: "#6C8DB5", bg: "#DDE6EF", st: "av", cond: "Muy buen estado", cost: 45000 },
+  { id: "GS-102", t: "Vestido midi de lino", b: "Zara", s: "S", p: 95000, c: "Vestidos", g: "dress", col: "#E8DCC4", bg: "#F3E9E3", st: "av", cond: "Como nuevo", cost: 30000 },
+  { id: "GS-103", t: "Jean mom tiro alto", b: "Mango", s: "38", p: 85000, c: "Pantalones", g: "jeans", col: "#4F6E95", bg: "#E1E7EE", st: "av", cond: "Muy buen estado", cost: 28000 },
+  { id: "GS-104", t: "Remera vintage estampada", b: "Nike", s: "L", p: 60000, c: "Remeras", g: "tee", col: "#F5F0E6", bg: "#EAD9CF", st: "av", cond: "Buen estado", cost: 15000 },
+  { id: "GS-105", t: "Pollera plisada satinada", b: "H&M", s: "M", p: 70000, c: "Polleras", g: "skirt", col: "#C9A27E", bg: "#F4E4D6", st: "av", cond: "Como nuevo", cost: 22000 },
+  { id: "GS-106", t: "Sweater tejido trenzado", b: "Sin marca", s: "M", p: 110000, c: "Abrigos", g: "sweater", col: "#EADFCB", bg: "#E6DDD0", st: "av", cond: "Muy buen estado", cost: 35000 },
+  { id: "GS-107", t: "Blazer marrón entallado", b: "Mango", s: "L", p: 150000, c: "Abrigos", g: "jacket", col: "#7A4E36", bg: "#EADBCF", st: "ho", cond: "Muy buen estado", cost: 50000 },
+  { id: "GS-108", t: "Vestido corto floral", b: "Shein", s: "XS", p: 75000, c: "Vestidos", g: "dress", col: "#F4C9D6", bg: "#F7E3E9", st: "so", cond: "Buen estado", cost: 20000 },
+  { id: "GS-109", t: "Remera básica rosa", b: "Uniqlo", s: "S", p: 45000, c: "Remeras", g: "tee", col: "#F4C9D6", bg: "#F1E4DC", st: "av", cond: "Como nuevo", cost: 12000 },
+  { id: "GS-110", t: "Cárdigan corto de punto", b: "Bershka", s: "M", p: 90000, c: "Abrigos", g: "sweater", col: "#8E6A5B", bg: "#EDE1D8", st: "av", cond: "Buen estado", cost: 25000 },
+  { id: "GS-111", t: "Pantalón sastrero crema", b: "Zara", s: "40", p: 98000, c: "Pantalones", g: "jeans", col: "#E9DFCC", bg: "#E5DCD0", st: "so", cond: "Muy buen estado", cost: 30000 },
+  { id: "GS-113", t: "Remera crop rayada", b: "Bershka", s: "XS", p: 50000, c: "Remeras", g: "tee", col: "#E9E2D6", bg: "#EDE3E6", st: "av", cond: "Como nuevo", cost: 14000 },
+  { id: "GS-114", t: "Remera oversize gris", b: "Pull&Bear", s: "XS", p: 55000, c: "Remeras", g: "tee", col: "#A9A4A0", bg: "#E7E2DD", st: "av", cond: "Muy buen estado", cost: 15000 },
+  { id: "GS-112", t: "Pollera de jean mini", b: "Levi's", s: "S", p: 65000, c: "Polleras", g: "skirt", col: "#5D7FA8", bg: "#DFE6EE", st: "av", cond: "Buen estado", cost: 18000 },
+];
+
+export const GASTOS = [
+  { d: "22 nov", t: "Compra de lote en feria", cat: "Stock", m: 180000 },
+  { d: "18 nov", t: "Bolsas y etiquetas", cat: "Insumos", m: 42000 },
+  { d: "12 nov", t: "Publicidad en Instagram", cat: "Publicidad", m: 60000 },
+  { d: "05 nov", t: "Envíos del mes", cat: "Envíos", m: 35000 },
+];
+
+export const gs = (n: number) => n.toLocaleString("es-PY").replace(/,/g, ".");
+export const waLink = (text: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`;
