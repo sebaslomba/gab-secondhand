@@ -15,7 +15,8 @@ export function ProductSheet() {
   if (it && it !== last) setLast(it);
   const shown = it ?? last;
 
-  useEffect(() => { setReserved(false); setLeft(RESERVA_MIN * 60); setCopied("Copiar"); }, [openId]);
+  const [prevOpen, setPrevOpen] = useState(openId);
+  if (openId !== prevOpen) { setPrevOpen(openId); setReserved(false); setLeft(RESERVA_MIN * 60); setCopied("Copiar"); }
   useEffect(() => {
     if (!reserved) return;
     const h = setInterval(() => setLeft(l => Math.max(0, l - 1)), 1000);
