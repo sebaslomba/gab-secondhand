@@ -373,3 +373,6 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .new-item input,.new-item select{font:inherit;font-weight:400;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
 .new-item input:focus,.new-item select:focus{outline:none;border-color:var(--petal-ink)}
 .new-item .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.login{grid-template-columns:minmax(0,1fr)}
+.login input{width:100%;min-width:0;box-sizing:border-box}
+.login p b{overflow-wrap:anywhere}
