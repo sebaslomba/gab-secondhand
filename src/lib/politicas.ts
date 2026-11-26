@@ -15,11 +15,13 @@ export const POLITICAS: { id: string; t: string; resumen: string; detalle: strin
   {
     id: "pagos",
     t: "Pagos",
-    resumen: "Por transferencia bancaria. El pedido se cierra recién con el pago.",
+    resumen: "Por transferencia, dentro de los 10 minutos. El pedido se cierra recién con el pago.",
     detalle: [
       "Pagás por transferencia o con el QR que Gab te manda desde la app del banco. No usamos pasarelas de pago.",
-      "La prenda es tuya recién cuando el pago se acredita y Gab lo confirma. Hasta entonces puede volver a la tienda.",
+      "Cuando Gab te pasa los datos de pago, tenés 10 minutos para pagar. Si no, el pedido se cancela y las prendas vuelven a la tienda.",
+      "La prenda es tuya recién cuando el pago se acredita y Gab lo confirma.",
       "Mandanos el comprobante por el mismo chat de WhatsApp.",
+      "No emitimos factura.",
     ],
   },
   {
@@ -30,6 +32,7 @@ export const POLITICAS: { id: string; t: string; resumen: string; detalle: strin
       "El envío sale recién después de confirmado el pago.",
       "En Asunción y Gran Asunción el envío es propio. No usamos apps de delivery ni mensajería de terceros. El costo depende de tu zona y lo ves en el carrito.",
       "Al interior enviamos por Multienvíos. Ese costo se cotiza aparte y Gab te lo pasa por WhatsApp.",
+      "Si ya pagaste y todavía no podés recibir el envío, guardamos tus prendas hasta 3 semanas.",
       "No hay retiro en persona.",
     ],
   },
