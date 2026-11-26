@@ -349,3 +349,27 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .sent b{font-family:var(--display);font-size:20px;letter-spacing:-.02em}
 .sent p{margin:0;font-size:14px;color:var(--muted)}
 .linkish{justify-self:start;border:0;background:none;padding:4px 0;color:var(--petal-ink);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+
+/* Panel real de Gab */
+.form-err{margin:0;color:#B4532A;font-size:14px}
+.login .otp{font-size:24px;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
+.admin-tabs{margin-bottom:18px;overflow-x:auto}
+.empty-row{padding:6px 18px 18px;color:var(--muted);margin:0}
+.order{margin:0 18px 14px;border:1px solid var(--line);border-radius:20px;padding:14px 16px;background:var(--bg)}
+.order header{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.order header b{font-size:17px}
+.order-time{font-size:13px;color:#B07A1E;font-weight:600}
+.order ul{list-style:none;margin:10px 0;padding:0;display:grid;gap:8px}
+.order li{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;align-items:center;font-size:14px}
+.order li .thumbph{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;overflow:hidden}
+.order li .thumbph svg{width:70%}
+.order li small{display:block;color:var(--muted);font-size:12px}
+.order-sum{margin:0 0 12px;color:var(--muted);font-size:14px}
+.order-sum b{color:var(--fg)}
+.order-act{display:flex;gap:10px}
+.order-act .cta{flex:1}
+.new-item{display:grid;gap:14px;padding:4px 18px 20px}
+.new-item label{display:grid;gap:6px;font-size:14px;font-weight:600}
+.new-item input,.new-item select{font:inherit;font-weight:400;padding:12px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
+.new-item input:focus,.new-item select:focus{outline:none;border-color:var(--petal-ink)}
+.new-item .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}

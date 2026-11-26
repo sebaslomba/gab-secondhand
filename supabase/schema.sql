@@ -51,7 +51,8 @@ $$;
 create or replace view catalogo with (security_invoker = false) as
   select id, titulo, marca, talle, precio, categoria, condicion, dibujo, color, fondo,
          estado_efectivo(estado, reservada_hasta) as estado,
-         case when estado = 'reservada' and reservada_hasta > now() then reservada_hasta end as reservada_hasta
+         case when estado = 'reservada' and reservada_hasta > now() then reservada_hasta end as reservada_hasta,
+         creada
   from prendas;
 
 alter table prendas enable row level security;

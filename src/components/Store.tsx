@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { PRENDAS, RESERVA_MIN, type Estado, type Prenda } from "@/lib/data";
+import { PRENDAS, RESERVA_MIN, deFila, type Estado, type FilaCatalogo, type Prenda } from "@/lib/data";
 
 type Ctx = {
   items: Prenda[];
@@ -29,15 +29,14 @@ type Ctx = {
 export type Reserva =
   | { ok: true; ids: string[]; codigo?: string }
   | { ok: false; ids: string[]; error?: boolean };
-type EstadoDb = { id: string; estado: "disponible" | "reservada" | "vendida" };
-const DE_DB: Record<EstadoDb["estado"], Estado> = { disponible: "av", reservada: "ho", vendida: "so" };
 
 const StoreCtx = createContext<Ctx | null>(null);
 const KEY = "gab-carrito";
 const RESERVA_MS = RESERVA_MIN * 60 * 1000;
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<Prenda[]>(PRENDAS);
+  // Con base de datos se arranca vacío (sin mostrar las prendas de ejemplo) hasta que llega el catálogo.
+  const [items, setItems] = useState<Prenda[]>(process.env.NEXT_PUBLIC_SUPABASE_URL ? [] : PRENDAS);
   const [openId, setOpenId] = useState<string | null>(null);
   const [toastMsg, setToast] = useState<Ctx["toastMsg"]>(null);
   const [cart, setCart] = useState<string[]>([]);
@@ -59,19 +58,17 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     t.current = setTimeout(() => setToast(null), 3200);
   }, []);
 
-  const aplicar = useCallback((xs: EstadoDb[]) => {
-    const m = new Map(xs.map(x => [x.id, DE_DB[x.estado]]));
-    setItems(cur => cur.map(x => (m.has(x.id) ? { ...x, st: m.get(x.id)! } : x)));
-  }, []);
+  // Con base de datos, el catálogo entero (prendas nuevas incluidas) viene del servidor.
   const sync = useCallback(async () => {
     try {
-      const r = await fetch("/api/estados", { cache: "no-store" });
-      if (!r.ok) return;
-      const j = (await r.json()) as { modo: string; estados: EstadoDb[] };
+      const r = await fetch("/api/catalogo", { cache: "no-store" });
+      // Base sin preparar o caída: se muestran las prendas de ejemplo y todo sigue en modo local.
+      if (!r.ok) { setItems(cur => (cur.length ? cur : PRENDAS)); return; }
+      const j = (await r.json()) as { modo: string; prendas: FilaCatalogo[] };
       modo.current = "db";
-      aplicar(j.estados);
+      setItems(j.prendas.map(deFila));
     } catch { /* sin conexión: se queda con lo último que sabía */ }
-  }, [aplicar]);
+  }, []);
   // Al entrar y cada vez que la persona vuelve a la pestaña, se actualizan los estados.
   useEffect(() => {
     queueMicrotask(() => { void sync(); });
@@ -86,7 +83,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const saved = JSON.parse(raw) as { cart?: string[]; reserved?: Ctx["reserved"] };
-        const ids = (saved.cart ?? []).filter(id => PRENDAS.some(p => p.id === id && p.st !== "so"));
+        const ids = (saved.cart ?? []).filter(id => !PRENDAS.some(p => p.id === id && p.st === "so"));
         const r = saved.reserved && Date.now() - saved.reserved.at < RESERVA_MS
           ? { at: saved.reserved.at, ids: saved.reserved.ids.filter(id => ids.includes(id)) } : null;
         setCart(ids);
