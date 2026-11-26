@@ -61,7 +61,7 @@ export function Envios({ pedidos, nombres, onCambio }: {
     return (
       <section className="panel">
         <h2>Envíos</h2>
-        <p className="fin-aviso">Para organizar los envíos falta un paso único en la base de datos: correr el archivo <b>supabase/envios.sql</b> en Supabase (SQL Editor).</p>
+        <p className="fin-aviso">Para organizar los envíos y crear etiquetas de color falta un paso único en la base de datos: correr el archivo <b>supabase/envios.sql</b> en Supabase (SQL Editor).</p>
       </section>
     );
   }
@@ -130,7 +130,7 @@ export function Envios({ pedidos, nombres, onCambio }: {
           <div className="grabber" />
           {editando && (
             <EditorEnvio key={editando.id} p={editando} etiquetas={etiquetas} sinEnvio={sinEnvio} nombres={nombres}
-              onCerrar={() => setEditando(null)}
+              onCerrar={() => setEditando(null)} onEtiquetas={cargar}
               onListo={async msg => { setEditando(null); toast(msg); await onCambio(); }} />
           )}
         </div>
@@ -163,10 +163,20 @@ function TarjetaPedido({ p, nombres, porId, onAbrir }: {
   );
 }
 
-function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo }: {
+function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEtiquetas }: {
   p: PedidoEnvio; etiquetas: Etiqueta[]; sinEnvio: Set<string>; nombres: Map<string, string>;
-  onCerrar: () => void; onListo: (msg: string) => Promise<void>;
+  onCerrar: () => void; onListo: (msg: string) => Promise<void>; onEtiquetas: () => Promise<void>;
 }) {
+  const [creando, setCreando] = useState(false);
+  const [nueva, setNueva] = useState({ nombre: "", color: PASTELES[0][1] });
+  const crearEtiqueta = async () => {
+    if (!nueva.nombre.trim()) return;
+    const { data, error } = await supabase()!.from("etiquetas").insert({ nombre: nueva.nombre.trim(), color: nueva.color }).select("id").single();
+    if (error || !data) { setError("No se pudo crear la etiqueta."); return; }
+    await onEtiquetas();
+    setF(x => ({ ...x, etiquetas: new Set([...x.etiquetas, (data as { id: string }).id]) }));
+    setNueva({ nombre: "", color: PASTELES[0][1] }); setCreando(false);
+  };
   const sb = supabase()!;
   const [f, setF] = useState({
     pago: p.pago === "pagado" ? "Pagado" : "Pendiente de pago",
@@ -204,7 +214,7 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo }: {
         </div>
         {f.fecha && sinEnvio.has(f.fecha) && <p className="form-err">Ese día lo marcaste como sin envíos.</p>}
         <div className="field-seg">Etiquetas
-          {etiquetas.length === 0 && <small className="env-hint">Creá etiquetas en la pestaña “Etiquetas”.</small>}
+
           <div className="env-tags">
             {etiquetas.map(e => {
               const on = f.etiquetas.has(e.id);
@@ -215,7 +225,24 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo }: {
                 </button>
               );
             })}
+            {!creando && <button type="button" className="env-pill pick on env-add" onClick={() => setCreando(true)}>+ Nueva etiqueta</button>}
           </div>
+          {creando && (
+            <div className="env-nueva">
+              <input autoFocus maxLength={30} value={nueva.nombre} placeholder="Nombre, ej: Envío sábado"
+                onChange={e => setNueva(x => ({ ...x, nombre: e.target.value }))}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); void crearEtiqueta(); } }} />
+              <div className="env-swatches">
+                {PASTELES.map(([n, c]) => (
+                  <button type="button" key={c} aria-label={n} aria-pressed={nueva.color === c} className={nueva.color === c ? "on" : undefined} style={{ background: c }} onClick={() => setNueva(x => ({ ...x, color: c }))} />
+                ))}
+              </div>
+              <div className="env-nueva-act">
+                <button type="button" className="linkish" onClick={() => setCreando(false)}>Cancelar</button>
+                <button type="button" className="env-pill tag pick on" style={{ background: nueva.color }} disabled={!nueva.nombre.trim()} onClick={crearEtiqueta}>Crear “{nueva.nombre.trim() || "etiqueta"}”</button>
+              </div>
+            </div>
+          )}
         </div>
         <label>Nota<input value={f.nota} placeholder="Ej: dirección, horario, referencia" onChange={e => setF(x => ({ ...x, nota: e.target.value }))} /></label>
         {error && <p className="form-err" role="alert">{error}</p>}

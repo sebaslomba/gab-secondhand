@@ -18,7 +18,7 @@ type FilaPrenda = {
   costo: number; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
   reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null;
 };
-export type Gasto = { id: string; fecha: string; concepto: string; monto: number };
+export type Gasto = { id: string; fecha: string; concepto: string; monto: number; tipo?: "ingreso" | "egreso" };
 type Pedido = PedidoEnvio & { vence: string };
 
 const OPCIONES = ["Disponible", "Reservada", "Vendida"];
@@ -168,7 +168,7 @@ function Panel({ email }: { email: string }) {
     const [p, o, g] = await Promise.all([
       sb.from("prendas").select("*").order("creada", { ascending: false }),
       sb.from("pedidos").select("*").order("creado", { ascending: false }).limit(200),
-      sb.from("gastos").select("id, fecha, concepto, monto").order("fecha", { ascending: false }),
+      sb.from("gastos").select("*").order("fecha", { ascending: false }),
     ]);
     if (p.data) setFilas(p.data as FilaPrenda[]);
     if (o.data) setPedidos(o.data as Pedido[]);
@@ -496,7 +496,7 @@ const rangoSemana = (d: Date): [string, string] => {
   return [isoDia(lun), isoDia(new Date(lun.getFullYear(), lun.getMonth(), lun.getDate() + 6))];
 };
 const corta = (s: string) => deIso(s).toLocaleDateString("es-PY", { day: "numeric", month: "short" });
-const CONCEPTOS = ["Envío", "Bolsas y packaging", "Publicidad", "Otro"];
+const CONCEPTOS = { egreso: ["Envío", "Bolsas y packaging", "Publicidad", "Otro"], ingreso: ["Live de TikTok", "Grupo de WhatsApp", "Instagram", "Venta en persona", "Otro"] };
 
 type Mov = { key: string; fecha: string; titulo: string; detalle: string; monto: number; gasto?: Gasto };
 
@@ -506,11 +506,12 @@ function fechaVenta(f: FilaPrenda, pedidos: Pedido[]) {
 }
 function resumen(filas: FilaPrenda[], pedidos: Pedido[], gastos: Gasto[], desde: string, hasta: string) {
   const dentro = (d: string) => d >= desde && d <= hasta;
-  const ventas: Mov[] = filas.filter(f => f.estado === "vendida").map(f => ({ key: `v${f.id}`, fecha: fechaVenta(f, pedidos), titulo: f.titulo, detalle: f.id, monto: f.precio }))
+  const ventas: Mov[] = filas.filter(f => f.estado === "vendida").map(f => ({ key: `v${f.id}`, fecha: fechaVenta(f, pedidos), titulo: f.titulo, detalle: f.id, monto: f.precio })).concat(
+      gastos.filter(g => g.tipo === "ingreso").map(g => ({ key: `g${g.id}`, fecha: g.fecha, titulo: g.concepto, detalle: "Ingreso anotado", monto: g.monto, gasto: g })))
     .filter(m => dentro(m.fecha)).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const egresos: Mov[] = [
     ...filas.filter(f => f.costo > 0).map(f => ({ key: `c${f.id}`, fecha: isoDia(new Date(f.creada)), titulo: f.titulo, detalle: `Compra de prenda · ${f.id}`, monto: f.costo })),
-    ...gastos.map(g => ({ key: `g${g.id}`, fecha: g.fecha, titulo: g.concepto, detalle: "Gasto anotado", monto: g.monto, gasto: g })),
+    ...gastos.filter(g => g.tipo !== "ingreso").map(g => ({ key: `g${g.id}`, fecha: g.fecha, titulo: g.concepto, detalle: "Gasto anotado", monto: g.monto, gasto: g })),
   ].filter(m => dentro(m.fecha)).sort((a, b) => b.fecha.localeCompare(a.fecha));
   const ingreso = ventas.reduce((a, m) => a + m.monto, 0);
   const egreso = egresos.reduce((a, m) => a + m.monto, 0);
@@ -540,23 +541,10 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
   }, [filas, pedidos, gastos]);
   const tope = Math.max(1, ...meses.map(m => Math.max(m.ingreso, m.egreso)));
 
-  const [nuevo, setNuevo] = useState({ concepto: CONCEPTOS[0], detalle: "", monto: "", fecha: isoDia(new Date()) });
-  const [guardando, setGuardando] = useState(false);
-  const num = (t: string) => Number(t.replace(/\D/g, "")) || 0;
-  const agregar = async (e: React.FormEvent) => {
-    e.preventDefault(); setGuardando(true);
-    const concepto = nuevo.detalle.trim() ? `${nuevo.concepto}: ${nuevo.detalle.trim()}` : nuevo.concepto;
-    const { error } = await sb.from("gastos").insert({ concepto, monto: num(nuevo.monto), fecha: nuevo.fecha });
-    setGuardando(false);
-    if (error) { toast("No se pudo guardar el gasto. Probá de nuevo.", "hold"); return; }
-    toast(`Gasto anotado: Gs. ${gs(num(nuevo.monto))}`);
-    setNuevo(x => ({ ...x, detalle: "", monto: "" }));
-    await onCambio();
-  };
   const borrar = async (g: Gasto) => {
     if (!window.confirm(`¿Borrar “${g.concepto}” de Gs. ${gs(g.monto)}?`)) return;
     const { error } = await sb.from("gastos").delete().eq("id", g.id);
-    toast(error ? "No se pudo borrar." : "Gasto borrado", error ? "hold" : "");
+    toast(error ? "No se pudo borrar." : "Borrado", error ? "hold" : "");
     await onCambio();
   };
   const lista = (movs: Mov[], vacio: string) => movs.length === 0 ? <p className="empty-row">{vacio}</p> : movs.map(m => (
@@ -596,29 +584,19 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
       </div>
 
       {abierto === "in" && (
-        <section className="panel fin-det in"><h2>Ventas</h2>{lista(r.ventas, "No hubo ventas en este período.")}</section>
+        <section className="panel fin-det in">
+          <h2>Ingresos</h2>
+          {lista(r.ventas, "No hubo ingresos en este período.")}
+          <h2>Anotar un ingreso</h2>
+          <Anotar tipo="ingreso" sinTabla={gastos === null} onCambio={onCambio} />
+        </section>
       )}
       {abierto === "out" && (
         <section className="panel fin-det out">
           <h2>Egresos</h2>
           {lista(r.egresos, "No hubo egresos en este período.")}
           <h2>Anotar un gasto</h2>
-          {gastos === null ? (
-            <p className="fin-aviso">Falta correr <b>supabase/finanzas.sql</b> en Supabase (SQL Editor) para anotar gastos.</p>
-          ) : (
-            <form className="new-item" onSubmit={agregar}>
-              <div className="two">
-                <label>Tipo<select value={nuevo.concepto} onChange={e => setNuevo(x => ({ ...x, concepto: e.target.value }))}>{CONCEPTOS.map(c => <option key={c}>{c}</option>)}</select></label>
-                <label>Monto (Gs.)<input required inputMode="numeric" placeholder="25.000" value={nuevo.monto}
-                  onChange={e => setNuevo(x => ({ ...x, monto: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }))} /></label>
-              </div>
-              <div className="two">
-                <label>Detalle (opcional)<input value={nuevo.detalle} placeholder="Ej: moto a Lambaré" onChange={e => setNuevo(x => ({ ...x, detalle: e.target.value }))} /></label>
-                <label>Fecha<input type="date" required value={nuevo.fecha} onChange={e => setNuevo(x => ({ ...x, fecha: e.target.value }))} /></label>
-              </div>
-              <button className="cta" type="submit" disabled={guardando || !num(nuevo.monto)}>{guardando ? "Guardando…" : "Anotar gasto"}</button>
-            </form>
-          )}
+          <Anotar tipo="egreso" sinTabla={gastos === null} onCambio={onCambio} />
         </section>
       )}
       {abierto === "gan" && (
@@ -646,5 +624,42 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
         <div className="fin-leyenda"><span><i className="in" />Ingreso</span><span><i className="out" />Egreso</span></div>
       </section>
     </div>
+  );
+}
+
+// Formulario para anotar un ingreso (live, WhatsApp…) o un gasto (envío, bolsas…) a mano.
+function Anotar({ tipo, sinTabla, onCambio }: { tipo: "ingreso" | "egreso"; sinTabla: boolean; onCambio: () => Promise<void> }) {
+  const sb = supabase()!;
+  const { toast } = useStore();
+  const [f, setF] = useState({ concepto: CONCEPTOS[tipo][0], detalle: "", monto: "", fecha: isoDia(new Date()) });
+  const [guardando, setGuardando] = useState(false);
+  const num = (t: string) => Number(t.replace(/\D/g, "")) || 0;
+  if (sinTabla) return <p className="fin-aviso">Falta correr <b>supabase/finanzas.sql</b> en Supabase (SQL Editor).</p>;
+  const guardar = async (e: React.FormEvent) => {
+    e.preventDefault(); setGuardando(true);
+    const concepto = f.detalle.trim() ? `${f.concepto}: ${f.detalle.trim()}` : f.concepto;
+    const { error } = await sb.from("gastos").insert({ concepto, monto: num(f.monto), fecha: f.fecha, tipo });
+    setGuardando(false);
+    if (error) {
+      toast(tipo === "ingreso" ? "No se pudo guardar. ¿Corriste el SQL nuevo de finanzas?" : "No se pudo guardar. Probá de nuevo.", "hold");
+      return;
+    }
+    toast(`${tipo === "ingreso" ? "Ingreso" : "Gasto"} anotado: Gs. ${gs(num(f.monto))}`);
+    setF(x => ({ ...x, detalle: "", monto: "" }));
+    await onCambio();
+  };
+  return (
+    <form className="new-item" onSubmit={guardar}>
+      <div className="two">
+        <label>{tipo === "ingreso" ? "De dónde" : "Tipo"}<select value={f.concepto} onChange={e => setF(x => ({ ...x, concepto: e.target.value }))}>{CONCEPTOS[tipo].map(c => <option key={c}>{c}</option>)}</select></label>
+        <label>Monto (Gs.)<input required inputMode="numeric" placeholder={tipo === "ingreso" ? "150.000" : "25.000"} value={f.monto}
+          onChange={e => setF(x => ({ ...x, monto: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }))} /></label>
+      </div>
+      <div className="two">
+        <label>Detalle (opcional)<input value={f.detalle} placeholder={tipo === "ingreso" ? "Ej: 3 remeras en el live" : "Ej: moto a Lambaré"} onChange={e => setF(x => ({ ...x, detalle: e.target.value }))} /></label>
+        <label>Fecha<input type="date" required value={f.fecha} onChange={e => setF(x => ({ ...x, fecha: e.target.value }))} /></label>
+      </div>
+      <button className="cta" type="submit" disabled={guardando || !num(f.monto)}>{guardando ? "Guardando…" : tipo === "ingreso" ? "Anotar ingreso" : "Anotar gasto"}</button>
+    </form>
   );
 }

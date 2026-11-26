@@ -39,3 +39,9 @@ drop policy if exists admin_gastos on gastos;
 create policy admin_gastos on gastos for all using (es_admin()) with check (es_admin());
 revoke all on gastos from anon;
 grant select, insert, update, delete on gastos to authenticated;
+
+-- 3) Ingresos anotados a mano (live de TikTok, grupo de WhatsApp…) van en la misma tabla, con tipo 'ingreso'.
+alter table gastos add column if not exists tipo text not null default 'egreso';
+do $$ begin
+  alter table gastos add constraint gastos_tipo_check check (tipo in ('ingreso', 'egreso'));
+exception when duplicate_object then null; end $$;
