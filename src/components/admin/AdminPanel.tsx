@@ -215,7 +215,6 @@ function Panel({ email }: { email: string }) {
               </li>
             ))}
           </ul>
-          <button className="linkish adm-out" onClick={() => void sb.auth.signOut()} title={email}>Cerrar sesión</button>
         </nav>
 
         <div className="adm-main">

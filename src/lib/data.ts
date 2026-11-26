@@ -13,7 +13,7 @@ export const TIKTOK = "https://www.tiktok.com/@gabsecondhand";
 export const RESERVA_MIN = 15;
 export const ALIAS = { alias: "gab.secondhand", titular: "A definir", banco: "A definir" };
 
-export const CATEGORIAS = ["Todo", "Remeras", "Vestidos", "Pantalones", "Polleras", "Abrigos"];
+export const CATEGORIAS = ["Todo", "Remeras", "Vestidos", "Pantalones", "Polleras", "Abrigos", "Shorts", "Calzado", "Accesorios"];
 export const TALLES = ["XS", "S", "M", "L", "38", "40"];
 export const ESTADO_LABEL: Record<Estado, [string, string]> = {
   av: ["Disponible", ""], ho: ["Reservada", "hold"], so: ["Vendida", "sold"],
@@ -65,7 +65,7 @@ export type FilaCatalogo = {
   condicion: string; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
 };
 export const DIBUJO_POR_CATEGORIA: Record<string, Prenda["g"]> = {
-  Remeras: "tee", Vestidos: "dress", Pantalones: "jeans", Polleras: "skirt", Abrigos: "jacket",
+  Remeras: "tee", Vestidos: "dress", Pantalones: "jeans", Polleras: "skirt", Abrigos: "jacket", Shorts: "skirt",
 };
 export const ESTADO_DE_DB: Record<FilaCatalogo["estado"], Estado> = { disponible: "av", reservada: "ho", vendida: "so" };
 export const ESTADO_A_DB: Record<Estado, FilaCatalogo["estado"]> = { av: "disponible", ho: "reservada", so: "vendida" };
