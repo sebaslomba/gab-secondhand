@@ -21,6 +21,8 @@ const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "
 const iso = (d: Date) => d.toLocaleDateString("en-CA");
 const hoyIso = () => iso(new Date());
 const deIso = (s: string) => new Date(`${s}T12:00`);
+// Cómo se nombra un pedido en el panel: el nombre de la clienta si Gab lo guardó, si no el código.
+export const quien = (p: { cliente?: string; codigo: string }) => p.cliente?.trim() || `Pedido #${p.codigo}`;
 const METODO: Record<string, string> = { delivery: "Delivery propio", courier: "Courier" };
 
 function nombreDia(s: string) {
@@ -146,7 +148,7 @@ function TarjetaPedido({ p, nombres, porId, onAbrir }: {
   return (
     <button type="button" className="env-card" onClick={onAbrir}>
       <span className="env-top">
-        <b>#{p.codigo}{p.cliente ? ` · ${p.cliente}` : ""}</b>
+        <b>{quien(p)}{p.cliente?.trim() && <small className="env-cod"> #{p.codigo}</small>}</b>
         <span className="env-total">Gs. {gs(p.total)}</span>
       </span>
       <small className="env-items">{p.prendas.map(id => nombres.get(id) ?? id).join(", ")}</small>
@@ -196,12 +198,12 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEti
     }).eq("id", p.id);
     setGuardando(false);
     if (error) { setError("No se pudo guardar. Probá de nuevo."); return; }
-    await onListo(enviado && !p.enviado ? `Pedido #${p.codigo} enviado` : `Pedido #${p.codigo} guardado`);
+    await onListo(enviado && !p.enviado ? `${quien({ ...p, cliente: f.cliente })}: enviado` : `${quien({ ...p, cliente: f.cliente })}: guardado`);
   };
 
   return (
     <>
-      <h3>Pedido #{p.codigo}</h3>
+      <h3>{quien(p)}</h3>
       <p className="demo-note" style={{ textAlign: "left", margin: "2px 0 8px" }}>
         {p.prendas.map(id => nombres.get(id) ?? id).join(", ")} · {p.zona || "Sin zona"} · Gs. {gs(p.total)}
       </p>
@@ -210,7 +212,7 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEti
         <div className="field-seg">Forma de envío<Segmented label="Forma de envío" options={["Sin definir", "Delivery propio", "Courier"]} value={f.metodo} onChange={v => setF(x => ({ ...x, metodo: v }))} /></div>
         <div className="two">
           <label>Día de envío<input type="date" value={f.fecha} onChange={e => setF(x => ({ ...x, fecha: e.target.value }))} /></label>
-          <label>Cliente<input value={f.cliente} placeholder="Nombre o teléfono" onChange={e => setF(x => ({ ...x, cliente: e.target.value }))} /></label>
+          <label>Nombre de la clienta<input value={f.cliente} placeholder="Como la tengas guardada" onChange={e => setF(x => ({ ...x, cliente: e.target.value }))} /></label>
         </div>
         {f.fecha && sinEnvio.has(f.fecha) && <p className="form-err">Ese día lo marcaste como sin envíos.</p>}
         <div className="field-seg">Etiquetas

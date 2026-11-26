@@ -11,7 +11,7 @@ import { Segmented } from "@/components/Segmented";
 import { useStore } from "@/components/Store";
 import { ChevronIcon } from "@/components/Icons";
 import { Filters } from "@/components/Filters";
-import { Envios, type PedidoEnvio } from "@/components/admin/Envios";
+import { Envios, quien, type PedidoEnvio } from "@/components/admin/Envios";
 
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
@@ -210,12 +210,16 @@ function Panel({ email }: { email: string }) {
 
   const confirmar = async (p: Pedido) => {
     const { error } = await sb.rpc("confirmar_pedido", { p_pedido: p.id });
-    await listo(error ? "No se pudo confirmar. Probá de nuevo." : `Pedido #${p.codigo} vendido. Organizá el envío en Envíos`, error ? "hold" : "sold");
+    await listo(error ? "No se pudo confirmar. Probá de nuevo." : `${quien(p)}: vendido. Organizá el envío en Envíos`, error ? "hold" : "sold");
+  };
+  const nombrar = async (p: Pedido, nombre: string) => {
+    const { error } = await sb.from("pedidos").update({ cliente: nombre.trim() }).eq("id", p.id);
+    await listo(error ? "No se pudo guardar el nombre." : nombre.trim() ? `Guardado: ${nombre.trim()}` : "Nombre borrado", error ? "hold" : "");
   };
   const cancelar = async (p: Pedido) => {
-    if (!window.confirm(`¿Cancelar el pedido #${p.codigo}? Las prendas vuelven a estar disponibles.`)) return;
+    if (!window.confirm(`¿Cancelar ${p.cliente?.trim() ? `el pedido de ${p.cliente.trim()}` : `el pedido #${p.codigo}`}? Las prendas vuelven a estar disponibles.`)) return;
     const { error } = await sb.rpc("cancelar_pedido", { p_pedido: p.id });
-    await listo(error ? "No se pudo cancelar. Probá de nuevo." : `Pedido #${p.codigo} cancelado`);
+    await listo(error ? "No se pudo cancelar. Probá de nuevo." : `${quien(p)}: cancelado`);
   };
 
   const MENU: { k: string; sub: string; n?: number }[] = [
@@ -268,9 +272,12 @@ function Panel({ email }: { email: string }) {
                   return (
                     <article className="order" key={p.id}>
                       <header>
-                        <b>Pedido #{p.codigo}</b>
+                        <b>{quien(p)}{p.cliente?.trim() && <small className="env-cod"> #{p.codigo}</small>}</b>
                         <span className="order-time">Reservado {min} min más</span>
                       </header>
+                      <input className="order-cliente" defaultValue={p.cliente ?? ""} placeholder={`Nombre de la clienta (código #${p.codigo} en WhatsApp)`}
+                        aria-label="Nombre de la clienta" onBlur={e => { if (e.target.value.trim() !== (p.cliente ?? "").trim()) void nombrar(p, e.target.value); }}
+                        onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
                       <ul>
                         {p.prendas.map(id => {
                           const it = porId.get(id);
@@ -295,7 +302,7 @@ function Panel({ email }: { email: string }) {
                   <>
                     <h2>Últimas ventas</h2>
                     {historial.map(p => (
-                      <div className="exp" key={p.id}><span>#{p.codigo} · {p.prendas.length} {p.prendas.length === 1 ? "prenda" : "prendas"}<small>{hora(p.creado)}</small></span><span>Gs. {gs(p.total)}</span></div>
+                      <div className="exp" key={p.id}><span>{quien(p)} · {p.prendas.length} {p.prendas.length === 1 ? "prenda" : "prendas"}<small>{hora(p.creado)}</small></span><span>Gs. {gs(p.total)}</span></div>
                     ))}
                   </>
                 )}
