@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { CATEGORIAS, TALLES } from "@/lib/data";
 import { useStore } from "@/components/Store";
 import { ProductCard } from "@/components/ProductCard";
-import { Segmented } from "@/components/Segmented";
+import { Filters } from "@/components/Filters";
+import { BackToTop } from "@/components/BackToTop";
 
 export default function Tienda() {
   const { items } = useStore();
@@ -27,6 +28,7 @@ export default function Tienda() {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
+    <>
     <main className="view view-in">
       <section className="wrap shop" id="catalogo" ref={head}>
         <div className="shop-head">
@@ -34,14 +36,13 @@ export default function Tienda() {
             <h2>{!filtered ? "Recién llegadas" : `${cat === "Todo" ? "Todo" : cat}${size ? `, talle ${size}` : ""}`}</h2>
             <p className="result">{!filtered ? "Tocá una prenda para verla de cerca y reservarla." : `${n} ${n === 1 ? "prenda disponible" : "prendas disponibles"}`}</p>
           </div>
-          <Segmented label="Categoría" options={CATEGORIAS} value={cat} onChange={v => change(() => setCat(v))} />
         </div>
-        <div className="sizes" role="group" aria-label="Talle">
-          <button type="button" className="size all" aria-pressed={!size} onClick={() => change(() => setSize(null))}>Todos los talles</button>
-          {TALLES.map(t => (
-            <button key={t} type="button" className="size" aria-pressed={size === t} onClick={() => change(() => setSize(size === t ? null : t))}>{t}</button>
-          ))}
-        </div>
+        <Filters groups={[
+          { key: "cat", label: "Tipo de ropa", value: cat, active: cat !== "Todo", options: CATEGORIAS, selected: cat,
+            onPick: v => change(() => setCat(v)) },
+          { key: "size", label: "Talle", value: size ?? "Todos", active: !!size, options: TALLES, selected: size,
+            onPick: v => change(() => setSize(size === v ? null : v)), onClear: () => change(() => setSize(null)) },
+        ]} />
         <div className="grid" key={anim}>
           {list.length ? list.map((it, k) => <ProductCard key={it.id} it={it} index={k} animate={anim > 0} />) : (
             <div className="empty">
@@ -53,5 +54,8 @@ export default function Tienda() {
         </div>
       </section>
     </main>
+    {/* fuera de <main>: su animación con transform haría que position:fixed quede relativo a la vista */}
+    <BackToTop />
+    </>
   );
 }
