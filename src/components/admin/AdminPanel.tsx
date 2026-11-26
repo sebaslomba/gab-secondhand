@@ -11,13 +11,15 @@ import { Segmented } from "@/components/Segmented";
 import { useStore } from "@/components/Store";
 import { ChevronIcon } from "@/components/Icons";
 import { Filters } from "@/components/Filters";
+import { Envios, type PedidoEnvio } from "@/components/admin/Envios";
 
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
   costo: number; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
-  reservada_hasta: string | null; pedido_id: string | null; creada: string;
+  reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null;
 };
-type Pedido = { id: string; codigo: string; prendas: string[]; zona: string; total: number; estado: string; creado: string; vence: string };
+export type Gasto = { id: string; fecha: string; concepto: string; monto: number };
+type Pedido = PedidoEnvio & { vence: string };
 
 const OPCIONES = ["Disponible", "Reservada", "Vendida"];
 const A_ESTADO: Record<string, Estado> = { Disponible: "av", Reservada: "ho", Vendida: "so" };
@@ -159,14 +161,18 @@ function Panel({ email }: { email: string }) {
   const [busca, setBusca] = useState("");
   const [tipo, setTipo] = useState("Todo");
   const [estado, setEstado] = useState("Todas");
+  // null: la tabla de gastos todavía no existe en la base (falta correr supabase/finanzas.sql).
+  const [gastos, setGastos] = useState<Gasto[] | null>([]);
 
   const cargar = useCallback(async () => {
-    const [p, o] = await Promise.all([
+    const [p, o, g] = await Promise.all([
       sb.from("prendas").select("*").order("creada", { ascending: false }),
-      sb.from("pedidos").select("*").order("creado", { ascending: false }).limit(60),
+      sb.from("pedidos").select("*").order("creado", { ascending: false }).limit(200),
+      sb.from("gastos").select("id, fecha, concepto, monto").order("fecha", { ascending: false }),
     ]);
     if (p.data) setFilas(p.data as FilaPrenda[]);
     if (o.data) setPedidos(o.data as Pedido[]);
+    setGastos(g.error ? null : (g.data as Gasto[]));
     setAhora(Date.now());
   }, [sb]);
   // Se actualiza solo cada 20 segundos y al volver a la app.
@@ -187,6 +193,8 @@ function Panel({ email }: { email: string }) {
   const historial = pedidos.filter(p => p.estado === "confirmado").slice(0, 10);
   const vendidas = prendas.filter(p => p.st === "so");
   const disponibles = prendas.filter(p => p.st === "av");
+  const reservadas = prendas.filter(p => p.st === "ho");
+  const mesActual = useMemo(() => resumenMes(filas, pedidos, gastos ?? [], claveMes(new Date())), [filas, pedidos, gastos]);
   const activa = seccion ?? "Pedidos";
   // Cada palabra escrita tiene que aparecer en nombre, marca, talle, tipo, condición o código.
   const filtradas = useMemo(() => {
@@ -202,7 +210,7 @@ function Panel({ email }: { email: string }) {
 
   const confirmar = async (p: Pedido) => {
     const { error } = await sb.rpc("confirmar_pedido", { p_pedido: p.id });
-    await listo(error ? "No se pudo confirmar. Probá de nuevo." : `Pedido #${p.codigo} vendido`, error ? "hold" : "sold");
+    await listo(error ? "No se pudo confirmar. Probá de nuevo." : `Pedido #${p.codigo} vendido. Organizá el envío en Envíos`, error ? "hold" : "sold");
   };
   const cancelar = async (p: Pedido) => {
     if (!window.confirm(`¿Cancelar el pedido #${p.codigo}? Las prendas vuelven a estar disponibles.`)) return;
@@ -213,7 +221,9 @@ function Panel({ email }: { email: string }) {
   const MENU: { k: string; sub: string; n?: number }[] = [
     { k: "Pedidos", sub: "Confirmá o cancelá lo que te piden", n: pendientes.length },
     { k: "Prendas", sub: "Editá precio, talle o estado", n: prendas.length },
+    { k: "Envíos", sub: "Pago, día y forma de envío de cada pedido", n: pedidos.filter(p => p.estado === "confirmado" && !p.enviado).length },
     { k: "Nueva prenda", sub: "Publicá algo nuevo en la tienda" },
+    { k: "Finanzas", sub: "Lo que entró, lo que gastaste y lo que ganaste" },
     { k: "Cuenta", sub: "Contraseña y cerrar sesión" },
   ];
 
@@ -241,10 +251,14 @@ function Panel({ email }: { email: string }) {
           {activa === "Pedidos" && (
             <>
               <div className="kpis">
-                <div className="kpi main"><small>Por confirmar</small><b>{pendientes.length}</b></div>
-                <div className="kpi"><small>Disponibles</small><b>{disponibles.length}</b></div>
-                <div className="kpi"><small>Vendidas</small><b>{vendidas.length}</b></div>
-                <div className="kpi"><small>Vendido en total</small><b>Gs. {gs(vendidas.reduce((a, p) => a + p.p, 0))}</b></div>
+                <div className="kpi main"><small>Pedidos por confirmar</small><b>{pendientes.length}</b>
+                  <span className="kpi-sub">{pendientes.length ? "Esperando tu respuesta" : "Nada pendiente"}</span></div>
+                <div className="kpi"><small>Prendas cargadas</small><b>{prendas.length}</b>
+                  <span className="kpi-sub">{disponibles.length} a la venta · {reservadas.length} {reservadas.length === 1 ? "reservada" : "reservadas"} · {vendidas.length} {vendidas.length === 1 ? "vendida" : "vendidas"}</span></div>
+                <div className="kpi"><small>Vendido este mes</small><b>Gs. {gs(mesActual.ingresos)}</b>
+                  <span className="kpi-sub">{mesActual.vendidas.length} {mesActual.vendidas.length === 1 ? "prenda" : "prendas"}</span></div>
+                <button type="button" className="kpi kpi-link" onClick={() => setSeccion("Finanzas")}><small>Ganancia este mes</small><b>Gs. {gs(mesActual.ganancia)}</b>
+                  <span className="kpi-sub">Ver detalle en Finanzas ›</span></button>
               </div>
               <section className="panel">
                 <h2>Por confirmar</h2>
@@ -338,6 +352,10 @@ function Panel({ email }: { email: string }) {
               <PrendaForm filas={filas} onListo={async t => { await listo(`Publicaste “${t}”`); setSeccion("Prendas"); }} />
             </section>
           )}
+
+          {activa === "Envíos" && <Envios pedidos={pedidos} nombres={new Map(filas.map(f => [f.id, f.titulo]))} onCambio={cargar} />}
+
+          {activa === "Finanzas" && <Finanzas filas={filas} pedidos={pedidos} gastos={gastos} onCambio={cargar} />}
 
           {activa === "Cuenta" && <Cuenta email={email} />}
         </div>
@@ -462,5 +480,148 @@ function Cuenta({ email }: { email: string }) {
       </form>
       <div className="new-item"><button className="cta ghost" onClick={() => void sb.auth.signOut()}>Cerrar sesión</button></div>
     </section>
+  );
+}
+
+// ---------- Finanzas ----------
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const claveMes = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const nombreMes = (k: string) => { const [a, m] = k.split("-"); return `${MESES[Number(m) - 1]} ${a}`; };
+const mover = (k: string, n: number) => { const [a, m] = k.split("-").map(Number); return claveMes(new Date(a, m - 1 + n, 1)); };
+const CONCEPTOS = ["Envío", "Bolsas y packaging", "Compra de ropa", "Publicidad", "Otro"];
+
+// Fecha de venta: la guardada por la base; si falta (antes de correr finanzas.sql), la del pedido o la de carga.
+function fechaVenta(f: FilaPrenda, pedidos: Pedido[]) {
+  return f.vendida_en ?? pedidos.find(p => p.id === f.pedido_id)?.creado ?? f.creada;
+}
+function resumenMes(filas: FilaPrenda[], pedidos: Pedido[], gastos: Gasto[], mes: string) {
+  const vendidas = filas.filter(f => f.estado === "vendida" && claveMes(new Date(fechaVenta(f, pedidos))) === mes);
+  const ingresos = vendidas.reduce((a, f) => a + f.precio, 0);
+  const costo = vendidas.reduce((a, f) => a + (f.costo || 0), 0);
+  const delMes = gastos.filter(g => g.fecha.slice(0, 7) === mes);
+  const otros = delMes.reduce((a, g) => a + g.monto, 0);
+  return { vendidas, ingresos, costo, gastos: delMes, otros, egresos: costo + otros, ganancia: ingresos - costo - otros, sinCosto: vendidas.filter(f => !f.costo).length };
+}
+
+function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; pedidos: Pedido[]; gastos: Gasto[] | null; onCambio: () => Promise<void> }) {
+  const sb = supabase()!;
+  const { toast } = useStore();
+  const hoy = claveMes(new Date());
+  const [mes, setMes] = useState(hoy);
+  const r = useMemo(() => resumenMes(filas, pedidos, gastos ?? [], mes), [filas, pedidos, gastos, mes]);
+  const ultimos = useMemo(() => Array.from({ length: 6 }, (_, i) => mover(hoy, -5 + i)).map(k => ({ k, ...resumenMes(filas, pedidos, gastos ?? [], k) })), [filas, pedidos, gastos, hoy]);
+  const tope = Math.max(1, ...ultimos.map(u => Math.max(u.ingresos, u.egresos)));
+  const enStock = filas.filter(f => f.estado !== "vendida");
+  const invertido = enStock.reduce((a, f) => a + (f.costo || 0), 0);
+  const potencial = enStock.reduce((a, f) => a + f.precio, 0);
+
+  const [nuevo, setNuevo] = useState({ concepto: CONCEPTOS[0], detalle: "", monto: "", fecha: new Date().toLocaleDateString("en-CA") });
+  const [guardando, setGuardando] = useState(false);
+  const num = (s: string) => Number(s.replace(/\D/g, "")) || 0;
+  const agregar = async (e: React.FormEvent) => {
+    e.preventDefault(); setGuardando(true);
+    const concepto = nuevo.detalle.trim() ? `${nuevo.concepto}: ${nuevo.detalle.trim()}` : nuevo.concepto;
+    const { error } = await sb.from("gastos").insert({ concepto, monto: num(nuevo.monto), fecha: nuevo.fecha });
+    setGuardando(false);
+    if (error) { toast("No se pudo guardar el gasto. Probá de nuevo.", "hold"); return; }
+    toast(`Gasto guardado: Gs. ${gs(num(nuevo.monto))}`);
+    setNuevo(x => ({ ...x, detalle: "", monto: "" }));
+    setMes(nuevo.fecha.slice(0, 7));
+    await onCambio();
+  };
+  const borrar = async (g: Gasto) => {
+    if (!window.confirm(`¿Borrar el gasto “${g.concepto}” de Gs. ${gs(g.monto)}?`)) return;
+    const { error } = await sb.from("gastos").delete().eq("id", g.id);
+    toast(error ? "No se pudo borrar." : "Gasto borrado", error ? "hold" : "");
+    await onCambio();
+  };
+
+  return (
+    <div className="fin">
+      <div className="fin-mes">
+        <button type="button" aria-label="Mes anterior" onClick={() => setMes(mover(mes, -1))}>‹</button>
+        <h2>{nombreMes(mes)}</h2>
+        <button type="button" aria-label="Mes siguiente" disabled={mes >= hoy} onClick={() => setMes(mover(mes, 1))}>›</button>
+      </div>
+
+      <div className="kpis">
+        <div className="kpi"><small>Entró (ventas)</small><b>Gs. {gs(r.ingresos)}</b><span className="kpi-sub">{r.vendidas.length} {r.vendidas.length === 1 ? "prenda vendida" : "prendas vendidas"}</span></div>
+        <div className="kpi"><small>Salió (gastos)</small><b>Gs. {gs(r.egresos)}</b><span className="kpi-sub">Costo de lo vendido + otros gastos</span></div>
+        <div className={`kpi main${r.ganancia < 0 ? " neg" : ""}`}><small>{r.ganancia < 0 ? "Pérdida" : "Ganancia"}</small><b>Gs. {gs(Math.abs(r.ganancia))}</b><span className="kpi-sub">Lo que te quedó en el mes</span></div>
+      </div>
+
+      <div className="cols">
+        <section className="panel">
+          <h2>Cómo se calcula</h2>
+          <div className="exp"><span>Ventas del mes<small>Precio de las prendas que pasaron a Vendida</small></span><span>Gs. {gs(r.ingresos)}</span></div>
+          <div className="exp"><span>− Lo que te costaron esas prendas<small>El “costo” que pusiste al cargar cada una</small></span><span>Gs. {gs(r.costo)}</span></div>
+          <div className="exp"><span>− Otros gastos del mes<small>Envíos, bolsas y lo que anotes abajo</small></span><span>Gs. {gs(r.otros)}</span></div>
+          <div className="exp fin-total"><span>= {r.ganancia < 0 ? "Pérdida" : "Ganancia"}</span><span>Gs. {gs(r.ganancia)}</span></div>
+          {r.sinCosto > 0 && <p className="fin-aviso">{r.sinCosto === 1 ? "1 prenda vendida no tiene" : `${r.sinCosto} prendas vendidas no tienen`} costo cargado, así que la ganancia puede ser menor. Podés completarlo en Prendas.</p>}
+
+          <h2>Ventas de {MESES[Number(mes.slice(5)) - 1]}</h2>
+          {r.vendidas.length === 0 && <p className="empty-row">No hubo ventas este mes.</p>}
+          {r.vendidas.map(f => (
+            <div className="exp" key={f.id}>
+              <span>{f.titulo}<small>{f.id} · costó Gs. {gs(f.costo || 0)} · ganaste Gs. {gs(f.precio - (f.costo || 0))}</small></span>
+              <span>Gs. {gs(f.precio)}</span>
+            </div>
+          ))}
+        </section>
+
+        <div className="fin-side">
+          <section className="panel">
+            <h2>Últimos 6 meses</h2>
+            <div className="fin-leyenda"><span><i className="in" />Entró</span><span><i className="out" />Salió</span></div>
+            {ultimos.map(u => (
+              <button type="button" key={u.k} className={`fin-bar${u.k === mes ? " on" : ""}`} onClick={() => setMes(u.k)}>
+                <span className="fin-bar-mes">{MESES[Number(u.k.slice(5)) - 1].slice(0, 3)}</span>
+                <span className="fin-bar-barras">
+                  <i className="in" style={{ width: `${(u.ingresos / tope) * 100}%` }} />
+                  <i className="out" style={{ width: `${(u.egresos / tope) * 100}%` }} />
+                </span>
+                <span className="fin-bar-gan">{u.ganancia < 0 ? "−" : ""}Gs. {gs(Math.abs(u.ganancia))}</span>
+              </button>
+            ))}
+          </section>
+
+          <section className="panel">
+            <h2>Ropa sin vender</h2>
+            <div className="exp"><span>Lo que pagaste por ella<small>{enStock.length} prendas en la tienda o reservadas</small></span><span>Gs. {gs(invertido)}</span></div>
+            <div className="exp"><span>Si la vendés toda<small>Suma de los precios de venta</small></span><span>Gs. {gs(potencial)}</span></div>
+          </section>
+
+          <section className="panel">
+            <h2>Otros gastos</h2>
+            {gastos === null ? (
+              <p className="fin-aviso">Para anotar gastos falta un paso único en la base de datos: correr el archivo <b>supabase/finanzas.sql</b> en Supabase (SQL Editor).</p>
+            ) : (
+              <>
+                <form className="new-item" onSubmit={agregar}>
+                  <div className="two">
+                    <label>Tipo<select value={nuevo.concepto} onChange={e => setNuevo(x => ({ ...x, concepto: e.target.value }))}>{CONCEPTOS.map(c => <option key={c}>{c}</option>)}</select></label>
+                    <label>Monto (Gs.)<input required inputMode="numeric" placeholder="25.000" value={nuevo.monto}
+                      onChange={e => setNuevo(x => ({ ...x, monto: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }))} /></label>
+                  </div>
+                  <div className="two">
+                    <label>Detalle (opcional)<input value={nuevo.detalle} placeholder="Ej: moto a Lambaré" onChange={e => setNuevo(x => ({ ...x, detalle: e.target.value }))} /></label>
+                    <label>Fecha<input type="date" required value={nuevo.fecha} onChange={e => setNuevo(x => ({ ...x, fecha: e.target.value }))} /></label>
+                  </div>
+                  <button className="cta" type="submit" disabled={guardando || !num(nuevo.monto)}>{guardando ? "Guardando…" : "Anotar gasto"}</button>
+                </form>
+                {r.gastos.length === 0 && <p className="empty-row">Sin otros gastos en {MESES[Number(mes.slice(5)) - 1]}.</p>}
+                {r.gastos.map(g => (
+                  <div className="exp" key={g.id}>
+                    <span>{g.concepto}<small>{new Date(`${g.fecha}T12:00`).toLocaleDateString("es-PY", { day: "numeric", month: "short" })} · <button type="button" className="linkish" onClick={() => borrar(g)}>Borrar</button></small></span>
+                    <span>Gs. {gs(g.monto)}</span>
+                  </div>
+                ))}
+              </>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
