@@ -597,3 +597,47 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .env-cod{font-size:12px;font-weight:500;color:var(--muted)}
 .order-cliente{width:100%;font:inherit;font-size:15px;padding:10px 12px;margin:4px 0 8px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg)}
 .order-cliente:focus{outline:none;border-color:var(--petal-ink)}
+
+/* Admin: hoja de prenda (nueva / editar). Pantalla completa en el celular, ventana centrada en la compu. */
+.adm-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-right:18px}
+.adm-add{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:9px 16px 9px 12px;background:var(--btn-bg);color:var(--btn-fg);font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:transform .2s var(--ios),background .2s}
+.adm-add span{font-size:20px;line-height:1;font-weight:500}
+.adm-add:hover{background:var(--btn-hover)}
+.adm-add:active{transform:scale(.96)}
+.adm-fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(22px + env(safe-area-inset-bottom,0px));z-index:45;width:60px;height:60px;border-radius:50%;border:0;display:grid;place-items:center;background:var(--btn-bg);color:var(--btn-fg);box-shadow:0 14px 30px -12px rgba(201,113,142,.95),0 2px 6px rgba(62,39,35,.12);cursor:pointer;animation:fab-in .5s .15s var(--ios) both;transition:transform .3s var(--ios),opacity .25s,background .2s}
+.adm-fab svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+.adm-fab:hover{background:var(--btn-hover)}
+.adm-fab:active{transform:scale(.92)}
+.adm-fab.off{opacity:0;transform:scale(.6);pointer-events:none}
+@keyframes fab-in{from{opacity:0;transform:scale(.4) rotate(-90deg)}}
+@media (min-width:760px){.adm-fab{display:none}}
+
+.ed-scrim{background:rgba(62,39,35,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.sheet.ed{inset:0;max-width:none;max-height:none;height:100dvh;border-radius:0;border:0;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;transform:translateY(100%);transition:transform .55s var(--ios),visibility 0s .55s}
+.sheet.ed.open{transform:none;transition:transform .55s var(--ios),visibility 0s}
+.ed-head{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 12px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);background:var(--bg)}
+.ed-head div{min-width:0}
+.ed-head h3{font-size:22px;letter-spacing:-.02em;line-height:1.15}
+.ed-head small{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ed-x{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--fg);display:grid;place-items:center;cursor:pointer;transition:transform .2s var(--ios),background .2s}
+.ed-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.ed-x:hover{background:var(--chip)}
+.ed-x:active{transform:scale(.92)}
+.sheet.ed .s-body{flex:1;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));overscroll-behavior:contain}
+.sheet.ed .new-item{max-width:640px;margin:0 auto;padding:18px 0 0;gap:16px}
+.sheet.ed .new-item input,.sheet.ed .new-item select{background:var(--surface)}
+.sheet.ed .order-act{position:sticky;bottom:0;margin:4px -16px 0;padding:12px 16px calc(14px + env(safe-area-inset-bottom,0px));background:linear-gradient(to bottom,rgba(245,240,230,0),var(--bg) 22%)}
+.sheet.ed .order-act .cta{margin-top:0}
+.sheet.ed .order-act .ghost{flex:0 0 34%}
+/* Entrada: los campos aparecen uno detrás de otro */
+.sheet.ed.open .ed-head>*{animation:enter .5s .12s var(--ios) both}
+.sheet.ed.open .new-item>*{animation:enter .55s var(--ios) both;animation-delay:calc(160ms + var(--k,0)*45ms)}
+.sheet.ed .new-item>:nth-child(2){--k:1}.sheet.ed .new-item>:nth-child(3){--k:2}.sheet.ed .new-item>:nth-child(4){--k:3}
+.sheet.ed .new-item>:nth-child(5){--k:4}.sheet.ed .new-item>:nth-child(6){--k:5}.sheet.ed .new-item>:nth-child(n+7){--k:6}
+@media (min-width:760px){
+  .sheet.ed{inset:auto;left:50%;top:50%;width:min(720px,92vw);height:auto;max-height:min(90vh,880px);border-radius:28px;border:1px solid var(--line);box-shadow:0 30px 80px -20px rgba(62,39,35,.4);overflow:hidden;opacity:0;transform:translate(-50%,-46%) scale(.96);transition:transform .5s var(--ios),opacity .3s var(--ios),visibility 0s .5s}
+  .sheet.ed.open{opacity:1;transform:translate(-50%,-50%);transition:transform .5s var(--ios),opacity .3s var(--ios),visibility 0s}
+  .ed-head{padding:18px 24px}
+  .sheet.ed .s-body{padding:0 32px}
+  .sheet.ed .order-act{margin:4px -32px 0;padding:14px 32px 22px}
+}

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import {
@@ -157,7 +158,20 @@ function Panel({ email }: { email: string }) {
   const [filas, setFilas] = useState<FilaPrenda[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [ahora, setAhora] = useState(0);
-  const [editando, setEditando] = useState<FilaPrenda | null>(null);
+  // Hoja de prenda: "nueva" o la prenda a editar. Se guarda aparte de "abierta" para que el contenido
+  // no desaparezca mientras la hoja se cierra con la animación.
+  const [hoja, setHoja] = useState<{ p: FilaPrenda | null; n: number }>({ p: null, n: 0 });
+  const [abierta, setAbierta] = useState(false);
+  const abrir = (p: FilaPrenda | null) => { setHoja(h => ({ p, n: h.n + 1 })); setAbierta(true); };
+  const cerrar = () => setAbierta(false);
+  useEffect(() => {
+    if (!abierta) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setAbierta(false); };
+    window.addEventListener("keydown", esc);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", esc); };
+  }, [abierta]);
   const [busca, setBusca] = useState("");
   const [tipo, setTipo] = useState("Todo");
   const [estado, setEstado] = useState("Todas");
@@ -312,7 +326,10 @@ function Panel({ email }: { email: string }) {
 
           {activa === "Prendas" && (
             <section className="panel adm-prendas">
-              <h2>Mis prendas</h2>
+              <div className="adm-head">
+                <h2>Mis prendas</h2>
+                <button type="button" className="adm-add" onClick={() => abrir(null)}><span aria-hidden="true">+</span>Nueva prenda</button>
+              </div>
               <div className="adm-tools">
                 <label className="adm-search">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
@@ -338,7 +355,7 @@ function Panel({ email }: { email: string }) {
                   const [lab, cls] = ESTADO_LABEL[it.st];
                   return (
                     <button type="button" key={it.id} className={`card glass mini${it.st === "so" ? " is-sold" : ""}${it.st === "ho" ? " is-hold" : ""}`}
-                      onClick={() => setEditando(f)} aria-label={`Editar ${it.t}, talle ${it.s}, ${lab}`}>
+                      onClick={() => abrir(f)} aria-label={`Editar ${it.t}, talle ${it.s}, ${lab}`}>
                       <div className="ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div>
                       <div className="info">
                         <div className="top"><span className="brand">{it.b}</span><span className={`st-pill ${cls}`}>{lab}</span></div>
@@ -368,21 +385,35 @@ function Panel({ email }: { email: string }) {
         </div>
       </div>
 
-      <div className={`scrim${editando ? " open" : ""}`} onClick={() => setEditando(null)} />
-      <div className={`sheet${editando ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Editar prenda" aria-hidden={!editando}>
+      {/* Fuera de <main>: su animación de entrada usa transform y atraparía lo que es "fixed". */}
+      {createPortal(<>
+      {activa === "Prendas" && (
+        <button type="button" className={`adm-fab${abierta ? " off" : ""}`} onClick={() => abrir(null)} aria-label="Agregar prenda nueva">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+      )}
+
+      <div className={`scrim ed-scrim${abierta ? " open" : ""}`} onClick={cerrar} />
+      <div className={`sheet ed${abierta ? " open" : ""}`} role="dialog" aria-modal="true"
+        aria-label={hoja.p ? "Editar prenda" : "Nueva prenda"} aria-hidden={!abierta}>
+        <header className="ed-head">
+          <button type="button" className="ed-x" onClick={cerrar} aria-label="Cerrar">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+          <div>
+            <h3>{hoja.p ? "Editar prenda" : "Nueva prenda"}</h3>
+            <small>{hoja.p ? `${hoja.p.id} · ${hoja.p.titulo}` : "Se publica al instante en la tienda"}</small>
+          </div>
+        </header>
         <div className="s-body">
-          <div className="grabber" />
-          {editando && (
-            <>
-              <h3>Editar prenda</h3>
-              <p className="demo-note" style={{ textAlign: "left", margin: "2px 0 8px" }}>{editando.id}</p>
-              <PrendaForm key={editando.id} filas={filas} prenda={editando}
-                onListo={async t => { setEditando(null); await listo(`Guardaste “${t}”`); }}
-                onCancelar={() => setEditando(null)} />
-            </>
+          {hoja.n > 0 && (
+            <PrendaForm key={hoja.n} filas={filas} prenda={hoja.p ?? undefined}
+              onListo={async t => { const era = hoja.p; cerrar(); await listo(era ? `Guardaste “${t}”` : `Publicaste “${t}”`); }}
+              onCancelar={cerrar} />
           )}
         </div>
       </div>
+      </>, document.body)}
     </main>
   );
 }
