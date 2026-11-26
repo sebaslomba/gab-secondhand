@@ -10,11 +10,11 @@ const ZKEY = "gab-zona";
 const precioZona = (z: string) => ZONAS_ENVIO.find(x => x.z === z)?.m ?? null;
 
 // Formato de WhatsApp: "> " al inicio de la línea se ve como cita y *texto* sale en negrita.
-export const pedidoTexto = (ps: Prenda[], zona: string) => {
+export const pedidoTexto = (ps: Prenda[], zona: string, codigo?: string) => {
   const sub = ps.reduce((a, p) => a + p.p, 0);
   const envio = precioZona(zona);
   return [
-    "Hola Gab! Quiero estos productos:",
+    codigo ? `Hola Gab! Quiero estos productos (pedido *#${codigo}*):` : "Hola Gab! Quiero estos productos:",
     ...ps.map(p => `> ${p.t} *[${p.id}]* · Gs. ${gs(p.p)}`),
     "",
     `Prendas: Gs. ${gs(sub)}`,
@@ -24,12 +24,16 @@ export const pedidoTexto = (ps: Prenda[], zona: string) => {
 };
 
 export function CartSheet() {
-  const { items, cart, cartOpen, closeCart, removeFromCart, reserved, reserveCart, finishOrder, setEstado, toast } = useStore();
+  const { items, cart, cartOpen, closeCart, removeFromCart, reserved, reserveCart, finishOrder, setEstado, toast, sync } = useStore();
+  const [enviando, setEnviando] = useState(false);
   const [zona, setZonaState] = useState("");
   const setZona = (z: string) => { setZonaState(z); try { localStorage.setItem(ZKEY, z); } catch { /* ignorar */ } };
   useEffect(() => {
     queueMicrotask(() => { try { setZonaState(localStorage.getItem(ZKEY) ?? ""); } catch { /* ignorar */ } });
   }, []);
+
+  // Al abrir el carrito se revisa si alguna prenda cambió de estado.
+  useEffect(() => { if (cartOpen) void sync(); }, [cartOpen, sync]);
 
   useEffect(() => {
     if (!cartOpen) return;
@@ -47,6 +51,27 @@ export function CartSheet() {
   const total = vigentes.reduce((a, p) => a + p.p, 0);
   const envio = precioZona(zona);
   const enviado = !!reserved && reservadas.length > 0;
+
+  // Antes de abrir WhatsApp se le pregunta al servidor si las prendas siguen libres y se reservan juntas.
+  const enviar = async () => {
+    if (enviando) return;
+    setEnviando(true);
+    // La pestaña se abre ya, dentro del toque: si se abre después de esperar, Safari la bloquea.
+    const w = window.open("", "_blank");
+    const r = await reserveCart(zona);
+    setEnviando(false);
+    if (r.ok) {
+      const url = waLink(pedidoTexto(lines.filter(p => r.ids.includes(p.id)), zona, r.codigo));
+      if (w) w.location.href = url; else window.location.assign(url);
+      return;
+    }
+    w?.close();
+    if (r.error) { toast("No pudimos confirmar tus prendas. Revisá tu conexión y probá de nuevo.", "hold"); return; }
+    const nombres = lines.filter(p => r.ids.includes(p.id)).map(p => `“${p.t}”`);
+    toast(nombres.length === 1
+      ? `${nombres[0]} ya no está disponible: alguien la pidió justo antes. Podés enviar el resto.`
+      : `${nombres.length} prendas ya no están disponibles: alguien las pidió justo antes. Podés enviar el resto.`, "hold");
+  };
 
   // Empezar de cero: libera lo apartado y vacía el carrito.
   const nuevoPedido = () => {
@@ -131,11 +156,11 @@ export function CartSheet() {
               {pendientes.length > 0 && !zona ? (
                 <button className="cta" disabled>Elegí tu zona de envío</button>
               ) : pendientes.length > 0 ? (
-                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(vigentes, zona))} onClick={reserveCart}>
-                  <WhatsAppIcon />Enviar
-                </a>
+                <button type="button" className="cta wa-cta" onClick={enviar} disabled={enviando} aria-busy={enviando}>
+                  <WhatsAppIcon />{enviando ? "Verificando…" : "Enviar"}
+                </button>
               ) : reservadas.length > 0 ? (
-                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(reservadas, zona))}><WhatsAppIcon />Abrir WhatsApp</a>
+                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(reservadas, zona, reserved?.codigo))}><WhatsAppIcon />Abrir WhatsApp</a>
               ) : (
                 <button className="cta" disabled>Nada disponible</button>
               )}
