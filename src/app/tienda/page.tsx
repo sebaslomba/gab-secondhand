@@ -29,22 +29,25 @@ export default function Tienda() {
 
   return (
     <>
-    <main className="view view-in">
+    <main className="view">
       <section className="wrap shop" id="catalogo" ref={head}>
         <div className="shop-head">
           <div>
-            <h2>{!filtered ? "Recién llegadas" : `${cat === "Todo" ? "Todo" : cat}${size ? `, talle ${size}` : ""}`}</h2>
-            <p className="result">{!filtered ? "Tocá una prenda para verla de cerca y sumarla al carrito." : `${n} ${n === 1 ? "prenda disponible" : "prendas disponibles"}`}</p>
+            <h2 className="rise">{!filtered ? "Recién llegadas" : `${cat === "Todo" ? "Todo" : cat}${size ? `, talle ${size}` : ""}`}</h2>
+            <p className="result rise" style={{ ["--d" as string]: 1 }}>{!filtered ? "Tocá una prenda para verla de cerca y sumarla al carrito." : `${n} ${n === 1 ? "prenda disponible" : "prendas disponibles"}`}</p>
           </div>
         </div>
+        <div className="rise" style={{ ["--d" as string]: 2 }}>
         <Filters groups={[
           { key: "cat", label: "Tipo de ropa", value: cat, active: cat !== "Todo", options: CATEGORIAS, selected: cat,
             onPick: v => change(() => setCat(v)) },
           { key: "size", label: "Talle", value: size ?? "Todos", active: !!size, options: TALLES, selected: size,
             onPick: v => change(() => setSize(size === v ? null : v)), onClear: () => change(() => setSize(null)) },
         ]} />
-        <div className="grid" key={anim}>
-          {list.length ? list.map((it, k) => <ProductCard key={it.id} it={it} index={k} animate={anim > 0} />) : (
+        </div>
+        {/* Al entrar, las tarjetas aparecen en cascada después del título y los filtros; al filtrar, arrancan enseguida. */}
+        <div className="grid" key={anim} style={{ ["--d0" as string]: anim ? "0ms" : "240ms" }}>
+          {list.length ? list.map((it, k) => <ProductCard key={it.id} it={it} index={k} animate />) : (
             <div className="empty">
               <b>No hay {what} en talle {size}</b>
               <span>Sacá el talle para ver {cat === "Todo" ? "todo" : `todas las ${what}`}, o escribinos y te avisamos cuando entre una.</span>
