@@ -6,7 +6,7 @@ import { ClockIcon } from "./Icons";
 import { useStore } from "./Store";
 
 export function ProductCard({ it, index, animate }: { it: Prenda; index: number; animate: boolean }) {
-  const { open } = useStore();
+  const { open, inCart } = useStore();
   const [lab, cls] = ESTADO_LABEL[it.st];
   const classes = ["card", "glass", it.st === "so" && "is-sold", it.st === "ho" && "is-hold", animate && "enter"].filter(Boolean).join(" ");
   return (
@@ -15,6 +15,7 @@ export function ProductCard({ it, index, animate }: { it: Prenda; index: number;
       <div className="ph" style={{ ["--tint" as string]: it.bg }}>
         <Garment it={it} />
         <span className="talle">{it.s}</span>
+        {inCart(it.id) && it.st !== "so" && <span className="incart">En tu carrito</span>}
         <div className="hold-ov"><span><ClockIcon />Reservada<small>Puede liberarse pronto</small></span></div>
         <div className="stamp"><i /><span>Vendida</span></div>
       </div>

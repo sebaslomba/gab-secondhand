@@ -24,7 +24,7 @@ export default function Home() {
         <div className="wrap">
           <h2>Cómo comprar</h2>
           <ol className="steps">
-            <li className="glass"><h3>Reservá la prenda</h3><p>Tocá “La quiero”. Queda apartada a tu nombre y tenés {RESERVA_MIN} minutos para pagarla. Mientras tanto, nadie más la puede reservar.</p></li>
+            <li className="glass"><h3>Armá tu carrito</h3><p>Sumá las prendas que quieras y tocá “Enviar”. Te abrimos WhatsApp con la lista y quedan apartadas a tu nombre {RESERVA_MIN} minutos para pagarlas.</p></li>
             <li className="glass"><h3>Transferí al alias</h3><p>Copiá el alias y transferí el monto exacto desde tu banco o billetera.</p></li>
             <li className="glass"><h3>Mandá el comprobante</h3><p>Te abrimos WhatsApp con el mensaje listo. Confirmamos el pago y dejamos la prenda lista para tu delivery.</p></li>
           </ol>

@@ -2,12 +2,20 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BagIcon, WhatsAppIcon } from "./Icons";
+import { useEffect, useRef, useState } from "react";
+import { BagIcon, CartIcon, WhatsAppIcon } from "./Icons";
+import { useStore } from "./Store";
 import { waLink } from "@/lib/data";
 
 export function Nav() {
   const path = usePathname();
   const admin = path.startsWith("/admin");
+  const { cart, openCart } = useStore();
+  const n = cart.length;
+  // El contador "salta" cada vez que se suma una prenda.
+  const [bump, setBump] = useState(0);
+  const prev = useRef(n);
+  useEffect(() => { if (n > prev.current) setBump(b => b + 1); prev.current = n; }, [n]);
   return (
     <header className="nav">
       <div className="wrap">
@@ -26,6 +34,13 @@ export function Nav() {
             </>
           )}
         </nav>
+        {!admin && (
+          <button type="button" className="cart-btn" onClick={openCart}
+            aria-label={n ? `Carrito, ${n} ${n === 1 ? "prenda" : "prendas"}` : "Carrito vacío"}>
+            <CartIcon />
+            {n > 0 && <span className="badge" key={bump}>{n}</span>}
+          </button>
+        )}
         {!admin && (
           <a className="wa" href={waLink("Hola Gab!")} target="_blank" rel="noopener">
             <WhatsAppIcon /><span>Escribinos</span>

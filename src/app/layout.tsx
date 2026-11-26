@@ -5,6 +5,7 @@ import { StoreProvider } from "@/components/Store";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { ProductSheet } from "@/components/ProductSheet";
+import { CartSheet } from "@/components/CartSheet";
 import { Toast } from "@/components/Toast";
 
 const bricolage = Bricolage_Grotesque({ subsets: ["latin"], weight: ["400", "600", "800"], variable: "--font-bricolage" });
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {children}
           <Footer />
           <ProductSheet />
+          <CartSheet />
           <Toast />
         </StoreProvider>
       </body>
