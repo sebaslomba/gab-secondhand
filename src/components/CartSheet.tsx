@@ -26,6 +26,15 @@ export const pedidoTexto = (ps: Prenda[], zona: string, codigo?: string) => {
 export function CartSheet() {
   const { items, cart, cartOpen, closeCart, removeFromCart, reserved, reserveCart, finishOrder, setEstado, toast, sync } = useStore();
   const [enviando, setEnviando] = useState(false);
+  // Prendas que se están yendo: primero se deslizan y se achican, después se quitan del carrito.
+  const [leaving, setLeaving] = useState<string[]>([]);
+  const quitar = (id: string) => {
+    if (leaving.includes(id)) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { removeFromCart(id); return; }
+    setLeaving(l => [...l, id]);
+    setTimeout(() => { removeFromCart(id); setLeaving(l => l.filter(x => x !== id)); }, 420);
+  };
   const [zona, setZonaState] = useState("");
   const setZona = (z: string) => { setZonaState(z); try { localStorage.setItem(ZKEY, z); } catch { /* ignorar */ } };
   useEffect(() => {
@@ -101,7 +110,7 @@ export function CartSheet() {
             <>
               <ul className="cart-list">
                 {lines.map(p => (
-                  <li key={p.id} className={ok(p) ? undefined : "gone"}>
+                  <li key={p.id} className={[ok(p) ? "" : "gone", leaving.includes(p.id) ? "leaving" : ""].join(" ").trim() || undefined}>
                     <div className="thumbph ph" style={{ ["--tint" as string]: p.bg }}><Garment it={p} /></div>
                     <div className="t">
                       <b>{p.t}</b>
@@ -110,7 +119,7 @@ export function CartSheet() {
                       </small>
                       <span className="p">Gs. {gs(p.p)}</span>
                     </div>
-                    <button className="rm" onClick={() => removeFromCart(p.id)} aria-label={`Quitar ${p.t}`}><TrashIcon /></button>
+                    <button className="rm" onClick={() => quitar(p.id)} aria-label={`Quitar ${p.t}`}><TrashIcon /></button>
                   </li>
                 ))}
               </ul>
@@ -134,7 +143,7 @@ export function CartSheet() {
                 <div><span>Prendas</span><span>Gs. {gs(total)}</span></div>
                 <div><span>Envío</span><span>{!zona ? "Elegí tu zona" : envio !== null ? `Gs. ${gs(envio)}` : "A cotizar"}</span></div>
               </div>
-              <div className="cart-total"><span>Total a pagar</span><b><small>Gs.</small>{gs(total + (envio ?? 0))}</b></div>
+              <div className="cart-total"><span>Total a pagar</span><b key={total + (envio ?? 0)} className="tick"><small>Gs.</small>{gs(total + (envio ?? 0))}</b></div>
 
               {enviado ? (
                 <div className="sent">

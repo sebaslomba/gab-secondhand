@@ -32,7 +32,7 @@ export function Nav() {
           )}
         </nav>
         {!admin && (
-          <button type="button" className="cart-btn" onClick={openCart}
+          <button type="button" className={`cart-btn${bump ? " bump" : ""}`} key={`c${bump}`} onClick={openCart}
             aria-label={n ? `Carrito, ${n} ${n === 1 ? "prenda" : "prendas"}` : "Carrito vacío"}>
             <CartIcon />
             {n > 0 && <span className="badge" key={bump}>{n}</span>}

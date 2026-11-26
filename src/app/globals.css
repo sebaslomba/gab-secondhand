@@ -283,6 +283,21 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .exp span:last-child{font-variant-numeric:tabular-nums;font-weight:600}
 .exp small{display:block;color:var(--muted);font-size:12px}
 
+/* Microanimaciones (estilo iOS) */
+.cart-list li.leaving{overflow:hidden;pointer-events:none;animation:leave .42s var(--ios) forwards}
+@keyframes leave{0%{opacity:1;transform:none;max-height:120px}50%{opacity:0;transform:translateX(-36px) scale(.94);max-height:120px;padding:10px 0}100%{opacity:0;transform:translateX(-36px) scale(.94);max-height:0;padding:0;border-bottom-width:0}}
+.cart-list .rm:active{transform:scale(.86);background:rgba(244,201,214,.55);color:var(--fg)}
+.cart-list .rm{transition:transform .2s var(--ios),background .2s,color .2s}
+.cart-list li.leaving .rm svg{animation:trash-shake .3s ease}
+@keyframes trash-shake{25%{transform:rotate(-14deg)}60%{transform:rotate(10deg)}100%{transform:none}}
+.cart-total b.tick{animation:tick .45s var(--ios)}
+@keyframes tick{0%{opacity:.4;transform:translateY(6px)}100%{opacity:1;transform:none}}
+.cart-empty{animation:view-in .5s var(--ios) both}
+.sent{animation:enter .5s var(--ios) both}
+.cart-btn.bump svg{animation:cart-jiggle .55s var(--ios)}
+@keyframes cart-jiggle{0%{transform:none}25%{transform:scale(1.15) rotate(-8deg)}55%{transform:scale(.95) rotate(5deg)}100%{transform:none}}
+.incart{animation:chip-pop .45s var(--ios) both}
+@keyframes chip-pop{from{opacity:0;transform:scale(.6) translateY(6px)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation:none!important}}
 
 /* Carrito */
