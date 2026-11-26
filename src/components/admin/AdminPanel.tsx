@@ -194,7 +194,7 @@ function Panel({ email }: { email: string }) {
   const vendidas = prendas.filter(p => p.st === "so");
   const disponibles = prendas.filter(p => p.st === "av");
   const reservadas = prendas.filter(p => p.st === "ho");
-  const mesActual = useMemo(() => resumenMes(filas, pedidos, gastos ?? [], claveMes(new Date())), [filas, pedidos, gastos]);
+  const mesActual = useMemo(() => { const [d, h] = rangoMes(new Date()); return resumen(filas, pedidos, gastos ?? [], d, h); }, [filas, pedidos, gastos]);
   const activa = seccion ?? "Pedidos";
   // Cada palabra escrita tiene que aparecer en nombre, marca, talle, tipo, condición o código.
   const filtradas = useMemo(() => {
@@ -256,7 +256,7 @@ function Panel({ email }: { email: string }) {
                 <div className="kpi"><small>Prendas cargadas</small><b>{prendas.length}</b>
                   <span className="kpi-sub">{disponibles.length} a la venta · {reservadas.length} {reservadas.length === 1 ? "reservada" : "reservadas"} · {vendidas.length} {vendidas.length === 1 ? "vendida" : "vendidas"}</span></div>
                 <div className="kpi"><small>Vendido este mes</small><b>Gs. {gs(mesActual.ingresos)}</b>
-                  <span className="kpi-sub">{mesActual.vendidas.length} {mesActual.vendidas.length === 1 ? "prenda" : "prendas"}</span></div>
+                  <span className="kpi-sub">{mesActual.ventas.length} {mesActual.ventas.length === 1 ? "prenda" : "prendas"}</span></div>
                 <button type="button" className="kpi kpi-link" onClick={() => setSeccion("Finanzas")}><small>Ganancia este mes</small><b>Gs. {gs(mesActual.ganancia)}</b>
                   <span className="kpi-sub">Ver detalle en Finanzas ›</span></button>
               </div>
@@ -484,144 +484,167 @@ function Cuenta({ email }: { email: string }) {
 }
 
 // ---------- Finanzas ----------
+// Ingreso: ventas por fecha de venta. Egreso: lo que pagaste por cada prenda (por fecha de carga) + gastos anotados.
+// Ganancia: ingreso − egreso del mismo período.
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-const claveMes = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-const nombreMes = (k: string) => { const [a, m] = k.split("-"); return `${MESES[Number(m) - 1]} ${a}`; };
-const mover = (k: string, n: number) => { const [a, m] = k.split("-").map(Number); return claveMes(new Date(a, m - 1 + n, 1)); };
-const CONCEPTOS = ["Envío", "Bolsas y packaging", "Compra de ropa", "Publicidad", "Otro"];
+const isoDia = (d: Date) => d.toLocaleDateString("en-CA");
+const deIso = (s: string) => new Date(`${s}T12:00`);
+const rangoMes = (d: Date): [string, string] => [isoDia(new Date(d.getFullYear(), d.getMonth(), 1)), isoDia(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+const rangoSemana = (d: Date): [string, string] => {
+  const lun = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  return [isoDia(lun), isoDia(new Date(lun.getFullYear(), lun.getMonth(), lun.getDate() + 6))];
+};
+const corta = (s: string) => deIso(s).toLocaleDateString("es-PY", { day: "numeric", month: "short" });
+const CONCEPTOS = ["Envío", "Bolsas y packaging", "Publicidad", "Otro"];
 
-// Fecha de venta: la guardada por la base; si falta (antes de correr finanzas.sql), la del pedido o la de carga.
+type Mov = { key: string; fecha: string; titulo: string; detalle: string; monto: number; gasto?: Gasto };
+
+// Fecha de venta: la guardada por la base; si falta, la del pedido o la de carga.
 function fechaVenta(f: FilaPrenda, pedidos: Pedido[]) {
-  return f.vendida_en ?? pedidos.find(p => p.id === f.pedido_id)?.creado ?? f.creada;
+  return isoDia(new Date(f.vendida_en ?? pedidos.find(p => p.id === f.pedido_id)?.creado ?? f.creada));
 }
-function resumenMes(filas: FilaPrenda[], pedidos: Pedido[], gastos: Gasto[], mes: string) {
-  const vendidas = filas.filter(f => f.estado === "vendida" && claveMes(new Date(fechaVenta(f, pedidos))) === mes);
-  const ingresos = vendidas.reduce((a, f) => a + f.precio, 0);
-  const costo = vendidas.reduce((a, f) => a + (f.costo || 0), 0);
-  const delMes = gastos.filter(g => g.fecha.slice(0, 7) === mes);
-  const otros = delMes.reduce((a, g) => a + g.monto, 0);
-  return { vendidas, ingresos, costo, gastos: delMes, otros, egresos: costo + otros, ganancia: ingresos - costo - otros, sinCosto: vendidas.filter(f => !f.costo).length };
+function resumen(filas: FilaPrenda[], pedidos: Pedido[], gastos: Gasto[], desde: string, hasta: string) {
+  const dentro = (d: string) => d >= desde && d <= hasta;
+  const ventas: Mov[] = filas.filter(f => f.estado === "vendida").map(f => ({ key: `v${f.id}`, fecha: fechaVenta(f, pedidos), titulo: f.titulo, detalle: f.id, monto: f.precio }))
+    .filter(m => dentro(m.fecha)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const egresos: Mov[] = [
+    ...filas.filter(f => f.costo > 0).map(f => ({ key: `c${f.id}`, fecha: isoDia(new Date(f.creada)), titulo: f.titulo, detalle: `Compra de prenda · ${f.id}`, monto: f.costo })),
+    ...gastos.map(g => ({ key: `g${g.id}`, fecha: g.fecha, titulo: g.concepto, detalle: "Gasto anotado", monto: g.monto, gasto: g })),
+  ].filter(m => dentro(m.fecha)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const ingreso = ventas.reduce((a, m) => a + m.monto, 0);
+  const egreso = egresos.reduce((a, m) => a + m.monto, 0);
+  return { ventas, egresos, ingreso, egreso, ganancia: ingreso - egreso, ingresos: ingreso };
 }
 
 function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; pedidos: Pedido[]; gastos: Gasto[] | null; onCambio: () => Promise<void> }) {
   const sb = supabase()!;
   const { toast } = useStore();
-  const hoy = claveMes(new Date());
-  const [mes, setMes] = useState(hoy);
-  const r = useMemo(() => resumenMes(filas, pedidos, gastos ?? [], mes), [filas, pedidos, gastos, mes]);
-  const ultimos = useMemo(() => Array.from({ length: 6 }, (_, i) => mover(hoy, -5 + i)).map(k => ({ k, ...resumenMes(filas, pedidos, gastos ?? [], k) })), [filas, pedidos, gastos, hoy]);
-  const tope = Math.max(1, ...ultimos.map(u => Math.max(u.ingresos, u.egresos)));
-  const enStock = filas.filter(f => f.estado !== "vendida");
-  const invertido = enStock.reduce((a, f) => a + (f.costo || 0), 0);
-  const potencial = enStock.reduce((a, f) => a + f.precio, 0);
+  const [modo, setModo] = useState("Mes");
+  const [ancla, setAncla] = useState(() => new Date());
+  const [libre, setLibre] = useState(() => rangoMes(new Date()));
+  const [abierto, setAbierto] = useState<string | null>(null);
 
-  const [nuevo, setNuevo] = useState({ concepto: CONCEPTOS[0], detalle: "", monto: "", fecha: new Date().toLocaleDateString("en-CA") });
+  const [desde, hasta] = modo === "Semana" ? rangoSemana(ancla) : modo === "Mes" ? rangoMes(ancla) : libre;
+  const r = useMemo(() => resumen(filas, pedidos, gastos ?? [], desde, hasta), [filas, pedidos, gastos, desde, hasta]);
+  const mover = (n: number) => setAncla(a => modo === "Semana" ? new Date(a.getFullYear(), a.getMonth(), a.getDate() + 7 * n) : new Date(a.getFullYear(), a.getMonth() + n, 1));
+  const enCurso = hasta >= isoDia(new Date());
+  const titulo = modo === "Mes" ? `${MESES[ancla.getMonth()]} ${ancla.getFullYear()}` : `${corta(desde)} – ${corta(hasta)}`;
+
+  const meses = useMemo(() => {
+    const hoy = new Date();
+    return Array.from({ length: 6 }, (_, i) => new Date(hoy.getFullYear(), hoy.getMonth() - 5 + i, 1)).map(d => {
+      const [a, b] = rangoMes(d);
+      return { d, ...resumen(filas, pedidos, gastos ?? [], a, b) };
+    });
+  }, [filas, pedidos, gastos]);
+  const tope = Math.max(1, ...meses.map(m => Math.max(m.ingreso, m.egreso)));
+
+  const [nuevo, setNuevo] = useState({ concepto: CONCEPTOS[0], detalle: "", monto: "", fecha: isoDia(new Date()) });
   const [guardando, setGuardando] = useState(false);
-  const num = (s: string) => Number(s.replace(/\D/g, "")) || 0;
+  const num = (t: string) => Number(t.replace(/\D/g, "")) || 0;
   const agregar = async (e: React.FormEvent) => {
     e.preventDefault(); setGuardando(true);
     const concepto = nuevo.detalle.trim() ? `${nuevo.concepto}: ${nuevo.detalle.trim()}` : nuevo.concepto;
     const { error } = await sb.from("gastos").insert({ concepto, monto: num(nuevo.monto), fecha: nuevo.fecha });
     setGuardando(false);
     if (error) { toast("No se pudo guardar el gasto. Probá de nuevo.", "hold"); return; }
-    toast(`Gasto guardado: Gs. ${gs(num(nuevo.monto))}`);
+    toast(`Gasto anotado: Gs. ${gs(num(nuevo.monto))}`);
     setNuevo(x => ({ ...x, detalle: "", monto: "" }));
-    setMes(nuevo.fecha.slice(0, 7));
     await onCambio();
   };
   const borrar = async (g: Gasto) => {
-    if (!window.confirm(`¿Borrar el gasto “${g.concepto}” de Gs. ${gs(g.monto)}?`)) return;
+    if (!window.confirm(`¿Borrar “${g.concepto}” de Gs. ${gs(g.monto)}?`)) return;
     const { error } = await sb.from("gastos").delete().eq("id", g.id);
     toast(error ? "No se pudo borrar." : "Gasto borrado", error ? "hold" : "");
     await onCambio();
   };
+  const lista = (movs: Mov[], vacio: string) => movs.length === 0 ? <p className="empty-row">{vacio}</p> : movs.map(m => (
+    <div className="exp" key={m.key}>
+      <span>{m.titulo}<small>{corta(m.fecha)} · {m.detalle}{m.gasto && <> · <button type="button" className="linkish" onClick={() => borrar(m.gasto!)}>Borrar</button></>}</small></span>
+      <span>Gs. {gs(m.monto)}</span>
+    </div>
+  ));
+  const boton = (k: string, label: string, monto: number, cls: string) => (
+    <button type="button" className={`fin-btn ${cls}${abierto === k ? " on" : ""}`} aria-expanded={abierto === k} onClick={() => setAbierto(abierto === k ? null : k)}>
+      <small>{label}</small><b>{monto < 0 ? "−" : ""}Gs. {gs(Math.abs(monto))}</b><ChevronIcon />
+    </button>
+  );
 
   return (
     <div className="fin">
-      <div className="fin-mes">
-        <button type="button" aria-label="Mes anterior" onClick={() => setMes(mover(mes, -1))}>‹</button>
-        <h2>{nombreMes(mes)}</h2>
-        <button type="button" aria-label="Mes siguiente" disabled={mes >= hoy} onClick={() => setMes(mover(mes, 1))}>›</button>
+      <div className="fin-periodo">
+        <Segmented label="Período" options={["Semana", "Mes", "Fechas"]} value={modo} onChange={setModo} />
+        {modo === "Fechas" ? (
+          <div className="fin-fechas">
+            <label>Desde<input type="date" value={libre[0]} max={libre[1]} onChange={e => setLibre([e.target.value, libre[1]])} /></label>
+            <label>Hasta<input type="date" value={libre[1]} min={libre[0]} onChange={e => setLibre([libre[0], e.target.value])} /></label>
+          </div>
+        ) : (
+          <div className="fin-mes">
+            <button type="button" aria-label="Anterior" onClick={() => mover(-1)}>‹</button>
+            <h2>{titulo}</h2>
+            <button type="button" aria-label="Siguiente" disabled={enCurso} onClick={() => mover(1)}>›</button>
+          </div>
+        )}
       </div>
 
-      <div className="kpis">
-        <div className="kpi"><small>Entró (ventas)</small><b>Gs. {gs(r.ingresos)}</b><span className="kpi-sub">{r.vendidas.length} {r.vendidas.length === 1 ? "prenda vendida" : "prendas vendidas"}</span></div>
-        <div className="kpi"><small>Salió (gastos)</small><b>Gs. {gs(r.egresos)}</b><span className="kpi-sub">Costo de lo vendido + otros gastos</span></div>
-        <div className={`kpi main${r.ganancia < 0 ? " neg" : ""}`}><small>{r.ganancia < 0 ? "Pérdida" : "Ganancia"}</small><b>Gs. {gs(Math.abs(r.ganancia))}</b><span className="kpi-sub">Lo que te quedó en el mes</span></div>
+      <div className="fin-btns">
+        {boton("in", "Ingreso", r.ingreso, "in")}
+        {boton("out", "Egreso", r.egreso, "out")}
+        {boton("gan", r.ganancia < 0 ? "Pérdida" : "Ganancia", r.ganancia, r.ganancia < 0 ? "out" : "gan")}
       </div>
 
-      <div className="cols">
-        <section className="panel">
-          <h2>Cómo se calcula</h2>
-          <div className="exp"><span>Ventas del mes<small>Precio de las prendas que pasaron a Vendida</small></span><span>Gs. {gs(r.ingresos)}</span></div>
-          <div className="exp"><span>− Lo que te costaron esas prendas<small>El “costo” que pusiste al cargar cada una</small></span><span>Gs. {gs(r.costo)}</span></div>
-          <div className="exp"><span>− Otros gastos del mes<small>Envíos, bolsas y lo que anotes abajo</small></span><span>Gs. {gs(r.otros)}</span></div>
-          <div className="exp fin-total"><span>= {r.ganancia < 0 ? "Pérdida" : "Ganancia"}</span><span>Gs. {gs(r.ganancia)}</span></div>
-          {r.sinCosto > 0 && <p className="fin-aviso">{r.sinCosto === 1 ? "1 prenda vendida no tiene" : `${r.sinCosto} prendas vendidas no tienen`} costo cargado, así que la ganancia puede ser menor. Podés completarlo en Prendas.</p>}
-
-          <h2>Ventas de {MESES[Number(mes.slice(5)) - 1]}</h2>
-          {r.vendidas.length === 0 && <p className="empty-row">No hubo ventas este mes.</p>}
-          {r.vendidas.map(f => (
-            <div className="exp" key={f.id}>
-              <span>{f.titulo}<small>{f.id} · costó Gs. {gs(f.costo || 0)} · ganaste Gs. {gs(f.precio - (f.costo || 0))}</small></span>
-              <span>Gs. {gs(f.precio)}</span>
-            </div>
-          ))}
+      {abierto === "in" && (
+        <section className="panel fin-det in"><h2>Ventas</h2>{lista(r.ventas, "No hubo ventas en este período.")}</section>
+      )}
+      {abierto === "out" && (
+        <section className="panel fin-det out">
+          <h2>Egresos</h2>
+          {lista(r.egresos, "No hubo egresos en este período.")}
+          <h2>Anotar un gasto</h2>
+          {gastos === null ? (
+            <p className="fin-aviso">Falta correr <b>supabase/finanzas.sql</b> en Supabase (SQL Editor) para anotar gastos.</p>
+          ) : (
+            <form className="new-item" onSubmit={agregar}>
+              <div className="two">
+                <label>Tipo<select value={nuevo.concepto} onChange={e => setNuevo(x => ({ ...x, concepto: e.target.value }))}>{CONCEPTOS.map(c => <option key={c}>{c}</option>)}</select></label>
+                <label>Monto (Gs.)<input required inputMode="numeric" placeholder="25.000" value={nuevo.monto}
+                  onChange={e => setNuevo(x => ({ ...x, monto: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }))} /></label>
+              </div>
+              <div className="two">
+                <label>Detalle (opcional)<input value={nuevo.detalle} placeholder="Ej: moto a Lambaré" onChange={e => setNuevo(x => ({ ...x, detalle: e.target.value }))} /></label>
+                <label>Fecha<input type="date" required value={nuevo.fecha} onChange={e => setNuevo(x => ({ ...x, fecha: e.target.value }))} /></label>
+              </div>
+              <button className="cta" type="submit" disabled={guardando || !num(nuevo.monto)}>{guardando ? "Guardando…" : "Anotar gasto"}</button>
+            </form>
+          )}
         </section>
+      )}
+      {abierto === "gan" && (
+        <section className="panel fin-det">
+          <div className="exp"><span>Ingreso</span><span className="t-in">Gs. {gs(r.ingreso)}</span></div>
+          <div className="exp"><span>Egreso</span><span className="t-out">− Gs. {gs(r.egreso)}</span></div>
+          <div className="exp fin-total"><span>{r.ganancia < 0 ? "Pérdida" : "Ganancia"}</span><span>Gs. {gs(r.ganancia)}</span></div>
+        </section>
+      )}
 
-        <div className="fin-side">
-          <section className="panel">
-            <h2>Últimos 6 meses</h2>
-            <div className="fin-leyenda"><span><i className="in" />Entró</span><span><i className="out" />Salió</span></div>
-            {ultimos.map(u => (
-              <button type="button" key={u.k} className={`fin-bar${u.k === mes ? " on" : ""}`} onClick={() => setMes(u.k)}>
-                <span className="fin-bar-mes">{MESES[Number(u.k.slice(5)) - 1].slice(0, 3)}</span>
-                <span className="fin-bar-barras">
-                  <i className="in" style={{ width: `${(u.ingresos / tope) * 100}%` }} />
-                  <i className="out" style={{ width: `${(u.egresos / tope) * 100}%` }} />
-                </span>
-                <span className="fin-bar-gan">{u.ganancia < 0 ? "−" : ""}Gs. {gs(Math.abs(u.ganancia))}</span>
-              </button>
-            ))}
-          </section>
-
-          <section className="panel">
-            <h2>Ropa sin vender</h2>
-            <div className="exp"><span>Lo que pagaste por ella<small>{enStock.length} prendas en la tienda o reservadas</small></span><span>Gs. {gs(invertido)}</span></div>
-            <div className="exp"><span>Si la vendés toda<small>Suma de los precios de venta</small></span><span>Gs. {gs(potencial)}</span></div>
-          </section>
-
-          <section className="panel">
-            <h2>Otros gastos</h2>
-            {gastos === null ? (
-              <p className="fin-aviso">Para anotar gastos falta un paso único en la base de datos: correr el archivo <b>supabase/finanzas.sql</b> en Supabase (SQL Editor).</p>
-            ) : (
-              <>
-                <form className="new-item" onSubmit={agregar}>
-                  <div className="two">
-                    <label>Tipo<select value={nuevo.concepto} onChange={e => setNuevo(x => ({ ...x, concepto: e.target.value }))}>{CONCEPTOS.map(c => <option key={c}>{c}</option>)}</select></label>
-                    <label>Monto (Gs.)<input required inputMode="numeric" placeholder="25.000" value={nuevo.monto}
-                      onChange={e => setNuevo(x => ({ ...x, monto: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }))} /></label>
-                  </div>
-                  <div className="two">
-                    <label>Detalle (opcional)<input value={nuevo.detalle} placeholder="Ej: moto a Lambaré" onChange={e => setNuevo(x => ({ ...x, detalle: e.target.value }))} /></label>
-                    <label>Fecha<input type="date" required value={nuevo.fecha} onChange={e => setNuevo(x => ({ ...x, fecha: e.target.value }))} /></label>
-                  </div>
-                  <button className="cta" type="submit" disabled={guardando || !num(nuevo.monto)}>{guardando ? "Guardando…" : "Anotar gasto"}</button>
-                </form>
-                {r.gastos.length === 0 && <p className="empty-row">Sin otros gastos en {MESES[Number(mes.slice(5)) - 1]}.</p>}
-                {r.gastos.map(g => (
-                  <div className="exp" key={g.id}>
-                    <span>{g.concepto}<small>{new Date(`${g.fecha}T12:00`).toLocaleDateString("es-PY", { day: "numeric", month: "short" })} · <button type="button" className="linkish" onClick={() => borrar(g)}>Borrar</button></small></span>
-                    <span>Gs. {gs(g.monto)}</span>
-                  </div>
-                ))}
-              </>
-            )}
-          </section>
+      <section className="panel fin-chart">
+        <h2>Por mes</h2>
+        <div className="fin-cols">
+          {meses.map(m => (
+            <button type="button" key={m.d.getMonth()} className="fin-col" onClick={() => { setModo("Mes"); setAncla(m.d); }}
+              aria-label={`${MESES[m.d.getMonth()]}: ingreso Gs. ${gs(m.ingreso)}, egreso Gs. ${gs(m.egreso)}`}>
+              <span className="fin-col-barras">
+                <i className="in" style={{ height: `${(m.ingreso / tope) * 100}%` }} />
+                <i className="out" style={{ height: `${(m.egreso / tope) * 100}%` }} />
+              </span>
+              <small>{MESES[m.d.getMonth()].slice(0, 3)}</small>
+            </button>
+          ))}
         </div>
-      </div>
+        <div className="fin-leyenda"><span><i className="in" />Ingreso</span><span><i className="out" />Egreso</span></div>
+      </section>
     </div>
   );
 }
