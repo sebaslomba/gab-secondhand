@@ -9,6 +9,13 @@ const Hook = () => (
   </svg>
 );
 
+const startSwing = (e: React.SyntheticEvent<HTMLElement>) => { e.currentTarget.dataset.swing = ""; };
+// No se corta la animación: solo marca que, al terminar la vuelta actual, debe frenar.
+const stopSwing = (e: React.SyntheticEvent<HTMLElement>) => {
+  const el = e.currentTarget;
+  if (!el.getAnimations().some(a => a.playState === "running")) delete el.dataset.swing;
+};
+
 export function Rack() {
   const { items, open } = useStore();
   const picks = items.filter(i => i.st === "av").slice(0, 6);
@@ -18,7 +25,10 @@ export function Rack() {
       <div className="hangers">
         {picks.map((it, k) => (
           <button key={it.id} className="hanger" style={{ ["--i" as string]: k }} onClick={() => open(it.id)}
-            onAnimationEnd={e => e.currentTarget.classList.add("ready")}
+            onAnimationEnd={e => { if (e.animationName.includes("hang-in")) e.currentTarget.dataset.ready = ""; }}
+            onMouseEnter={startSwing} onFocus={startSwing}
+            onMouseLeave={stopSwing} onBlur={stopSwing}
+            onAnimationIteration={e => { const el = e.currentTarget; if (!el.matches(":hover, :focus-visible")) delete el.dataset.swing; }}
             aria-label={`${it.t}, talle ${it.s}, ${gs(it.p)} guaraníes`}>
             <Hook />
             <div className="glass">
