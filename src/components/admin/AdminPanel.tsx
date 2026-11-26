@@ -266,6 +266,7 @@ function Panel({ email }: { email: string }) {
         <div className="adm-main">
           <button type="button" className="adm-back" onClick={() => setSeccion(null)}><ChevronIcon />Menú</button>
 
+          <div className="adm-pane" key={activa}>
           {activa === "Pedidos" && (
             <>
               <div className="kpis">
@@ -382,6 +383,7 @@ function Panel({ email }: { email: string }) {
           {activa === "Finanzas" && <Finanzas filas={filas} pedidos={pedidos} gastos={gastos} onCambio={cargar} />}
 
           {activa === "Cuenta" && <Cuenta email={email} />}
+          </div>
         </div>
       </div>
 

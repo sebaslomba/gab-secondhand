@@ -9,7 +9,18 @@ export type PedidoEnvio = {
   id: string; codigo: string; prendas: string[]; zona: string; total: number; estado: string; creado: string;
   pago?: "pendiente" | "pagado"; envio_fecha?: string | null; envio_metodo?: "delivery" | "courier" | null;
   enviado?: boolean; etiquetas?: string[]; cliente?: string; nota?: string;
+  envio_estado?: EstadoEnvio | null;
 };
+export type EstadoEnvio = "retirar" | "delivery" | "camino" | "entregado";
+// Los cuatro pasos de un envío, cada uno con su color pastel.
+export const ESTADOS: { k: EstadoEnvio; corto: string; largo: string; color: string }[] = [
+  { k: "retirar", corto: "Por retirar", largo: "Falta que lo busque el delivery", color: "#FBD9C4" },
+  { k: "delivery", corto: "Con delivery", largo: "Ya lo tiene el delivery", color: "#DDD3F0" },
+  { k: "camino", corto: "En camino", largo: "En camino a la clienta", color: "#CFE3F3" },
+  { k: "entregado", corto: "Entregado", largo: "Entregado", color: "#CDEBD8" },
+];
+// Si todavía no se corrió estado-envio.sql, se usa el viejo "enviado".
+export const estadoDe = (p: PedidoEnvio): EstadoEnvio => p.envio_estado ?? (p.enviado ? "entregado" : "retirar");
 type Etiqueta = { id: string; nombre: string; color: string };
 
 export const PASTELES = [
@@ -43,6 +54,22 @@ export function Envios({ pedidos, nombres, onCambio }: {
   const [etiquetas, setEtiquetas] = useState<Etiqueta[] | null>([]);
   const [sinEnvio, setSinEnvio] = useState<Set<string>>(new Set());
   const [editando, setEditando] = useState<PedidoEnvio | null>(null);
+  // Cambio de estado al instante en pantalla, mientras se guarda en la base.
+  const [cambios, setCambios] = useState<Record<string, EstadoEnvio>>({});
+  const conEstado = pedidos.some(p => "envio_estado" in p);
+  const cambiarEstado = async (p: PedidoEnvio, e: EstadoEnvio) => {
+    if (!conEstado) { toast("Falta correr supabase/estado-envio.sql en Supabase.", "hold"); return; }
+    if (estadoDe(p) === e) return;
+    setCambios(c => ({ ...c, [p.id]: e }));
+    const { error } = await sb.from("pedidos").update({ envio_estado: e, enviado: e === "entregado" }).eq("id", p.id);
+    if (error) {
+      setCambios(c => { const n = { ...c }; delete n[p.id]; return n; });
+      toast("No se pudo guardar. Probá de nuevo.", "hold"); return;
+    }
+    toast(`${quien(p)}: ${ESTADOS.find(x => x.k === e)!.largo.toLowerCase()}`);
+    await onCambio();
+    setCambios(c => { const n = { ...c }; delete n[p.id]; return n; });
+  };
 
   const cargar = useCallback(async () => {
     const [e, d] = await Promise.all([
@@ -54,9 +81,10 @@ export function Envios({ pedidos, nombres, onCambio }: {
   }, [sb]);
   useEffect(() => { queueMicrotask(() => { void cargar(); }); }, [cargar]);
 
-  const confirmados = pedidos.filter(p => p.estado === "confirmado");
-  const porEnviar = confirmados.filter(p => !p.enviado);
-  const enviados = confirmados.filter(p => p.enviado);
+  const confirmados = pedidos.filter(p => p.estado === "confirmado")
+    .map(p => cambios[p.id] ? { ...p, envio_estado: cambios[p.id], enviado: cambios[p.id] === "entregado" } : p);
+  const porEnviar = confirmados.filter(p => estadoDe(p) !== "entregado");
+  const enviados = confirmados.filter(p => estadoDe(p) === "entregado");
   const porId = useMemo(() => new Map((etiquetas ?? []).map(e => [e.id, e])), [etiquetas]);
 
   if (etiquetas === null) {
@@ -75,20 +103,21 @@ export function Envios({ pedidos, nombres, onCambio }: {
     grupos.set(k, [...(grupos.get(k) ?? []), p]);
   });
   const sinPagar = porEnviar.filter(p => p.pago !== "pagado").length;
-  const tarjeta = (p: PedidoEnvio) => <TarjetaPedido key={p.id} p={p} nombres={nombres} porId={porId} onAbrir={() => setEditando(p)} />;
+  const tarjeta = (p: PedidoEnvio) => <TarjetaPedido key={p.id} p={p} nombres={nombres} porId={porId} onAbrir={() => setEditando(p)} onEstado={e => void cambiarEstado(p, e)} />;
 
   return (
     <div className="env">
       <div className="kpis">
-        <div className="kpi main"><small>Por enviar</small><b>{porEnviar.length}</b><span className="kpi-sub">Pedidos confirmados que todavía no salieron</span></div>
+        <div className="kpi main"><small>Por entregar</small><b>{porEnviar.length}</b><span className="kpi-sub">{ESTADOS.slice(0, 3).map(x => `${porEnviar.filter(p => estadoDe(p) === x.k).length} ${x.corto.toLowerCase()}`).join(" · ")}</span></div>
         <div className="kpi"><small>Pendientes de pago</small><b>{sinPagar}</b><span className="kpi-sub">De los que están por enviar</span></div>
         <div className="kpi"><small>Sin día asignado</small><b>{grupos.get("")?.length ?? 0}</b><span className="kpi-sub">Tocá el pedido para elegir el día</span></div>
       </div>
 
       <div className="env-tabs">
-        <Segmented label="Vista de envíos" options={["Por enviar", "Calendario", "Enviados", "Etiquetas"]} value={vista} onChange={setVista} />
+        <Segmented label="Vista de envíos" options={["Por enviar", "Calendario", "Entregados", "Etiquetas"]} value={vista} onChange={setVista} />
       </div>
 
+      <div className="env-vista" key={vista}>
       {vista === "Por enviar" && (
         <section className="panel">
           {porEnviar.length === 0 && <p className="empty-row" style={{ paddingTop: 18 }}>No hay envíos por preparar. Cuando confirmes un pedido, aparece acá.</p>}
@@ -116,15 +145,16 @@ export function Envios({ pedidos, nombres, onCambio }: {
           }} />
       )}
 
-      {vista === "Enviados" && (
+      {vista === "Entregados" && (
         <section className="panel">
-          <h2>Ya enviados</h2>
-          {enviados.length === 0 && <p className="empty-row">Todavía no marcaste pedidos como enviados.</p>}
+          <h2>Ya entregados</h2>
+          {enviados.length === 0 && <p className="empty-row">Todavía no marcaste pedidos como entregados.</p>}
           {[...enviados].sort((a, b) => (b.envio_fecha ?? "").localeCompare(a.envio_fecha ?? "")).slice(0, 40).map(tarjeta)}
         </section>
       )}
 
       {vista === "Etiquetas" && <Etiquetas etiquetas={etiquetas} onCambio={cargar} />}
+      </div>
 
       <div className={`scrim${editando ? " open" : ""}`} onClick={() => setEditando(null)} />
       <div className={`sheet${editando ? " open" : ""}`} role="dialog" aria-modal="true" aria-label="Envío del pedido" aria-hidden={!editando}>
@@ -141,12 +171,14 @@ export function Envios({ pedidos, nombres, onCambio }: {
   );
 }
 
-function TarjetaPedido({ p, nombres, porId, onAbrir }: {
-  p: PedidoEnvio; nombres: Map<string, string>; porId: Map<string, Etiqueta>; onAbrir: () => void;
+function TarjetaPedido({ p, nombres, porId, onAbrir, onEstado }: {
+  p: PedidoEnvio; nombres: Map<string, string>; porId: Map<string, Etiqueta>; onAbrir: () => void; onEstado: (e: EstadoEnvio) => void;
 }) {
   const pagado = p.pago === "pagado";
+  const est = estadoDe(p);
   return (
-    <button type="button" className="env-card" onClick={onAbrir}>
+    <div className="env-card">
+    <button type="button" className="env-open" onClick={onAbrir}>
       <span className="env-top">
         <b>{quien(p)}{p.cliente?.trim() && <small className="env-cod"> #{p.codigo}</small>}</b>
         <span className="env-total">Gs. {gs(p.total)}</span>
@@ -162,6 +194,14 @@ function TarjetaPedido({ p, nombres, porId, onAbrir }: {
       </span>
       {p.nota && <small className="env-nota">{p.nota}</small>}
     </button>
+    <div className="env-est" role="group" aria-label="Estado del envío">
+      {ESTADOS.map(x => (
+        <button key={x.k} type="button" aria-pressed={est === x.k} title={x.largo} style={{ ["--c" as string]: x.color }} onClick={() => onEstado(x.k)}>
+          <i />{x.corto}
+        </button>
+      ))}
+    </div>
+    </div>
   );
 }
 
@@ -195,10 +235,11 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEti
     const { error } = await sb.from("pedidos").update({
       pago: f.pago === "Pagado" ? "pagado" : "pendiente", envio_metodo: metodo, envio_fecha: f.fecha || null,
       cliente: f.cliente.trim(), nota: f.nota.trim(), etiquetas: [...f.etiquetas], enviado,
+      ...("envio_estado" in p ? { envio_estado: enviado ? "entregado" : (estadoDe(p) === "entregado" ? "retirar" : estadoDe(p)) } : {}),
     }).eq("id", p.id);
     setGuardando(false);
     if (error) { setError("No se pudo guardar. Probá de nuevo."); return; }
-    await onListo(enviado && !p.enviado ? `${quien({ ...p, cliente: f.cliente })}: enviado` : `${quien({ ...p, cliente: f.cliente })}: guardado`);
+    await onListo(enviado && !p.enviado ? `${quien({ ...p, cliente: f.cliente })}: entregado` : `${quien({ ...p, cliente: f.cliente })}: guardado`);
   };
 
   return (
@@ -253,7 +294,7 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEti
           <button type="submit" className="cta" disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</button>
         </div>
         <button type="button" className="linkish" disabled={guardando} onClick={() => guardar(!p.enviado)}>
-          {p.enviado ? "Volver a “Por enviar”" : "Marcar como enviado"}
+          {p.enviado ? "Volver a “Por enviar”" : "Marcar como entregado"}
         </button>
       </form>
     </>

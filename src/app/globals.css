@@ -641,3 +641,28 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
   .sheet.ed .s-body{padding:0 32px}
   .sheet.ed .order-act{margin:4px -32px 0;padding:14px 32px 22px}
 }
+
+/* Panel: entrada suave al cambiar de pestaña (solo opacidad y movimiento, liviano) */
+@keyframes pane-in{from{opacity:0;transform:translateY(12px)}}
+.adm-pane>*{animation:pane-in .42s var(--ios) both}
+.adm-pane>*:nth-child(2){animation-delay:.05s}
+.adm-pane>*:nth-child(3){animation-delay:.1s}
+.adm-pane>*:nth-child(n+4){animation-delay:.14s}
+.env>.kpis{animation:pane-in .42s var(--ios) both}
+.env>.env-tabs{animation:pane-in .42s .05s var(--ios) both}
+.env-vista{animation:pane-in .36s .08s var(--ios) both}
+@media (max-width:899px){.adm:not(.in) .adm-nav{animation:pane-in .36s var(--ios) both}}
+
+/* Envíos: estado de cada pedido (un toque para cambiarlo) */
+.env-card{cursor:default;padding:0;gap:0}
+.env-card:hover{background:none}
+.env-open{width:100%;display:grid;gap:6px;text-align:left;border:0;background:none;padding:14px 18px 10px;font:inherit;color:inherit;cursor:pointer;border-radius:0;transition:background .2s var(--ios)}
+.env-open:hover{background:rgba(244,201,214,.18)}
+.env-est{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:0 18px 14px}
+.env-est button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:6px 4px;border-radius:14px;border:1.5px solid var(--line);background:transparent;font:inherit;font-size:12.5px;font-weight:600;line-height:1.15;color:var(--muted);cursor:pointer;text-align:center;transition:background .25s var(--ios),border-color .25s var(--ios),color .25s,transform .2s var(--ios)}
+.env-est button i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c);opacity:.9}
+.env-est button:active{transform:scale(.95)}
+.env-est button[aria-pressed="true"]{background:var(--c);border-color:transparent;color:var(--espresso);box-shadow:inset 0 0 0 1.5px rgba(62,39,35,.18)}
+.env-est button[aria-pressed="true"] i{background:var(--espresso);opacity:.55}
+.env-pill.est{color:var(--espresso)}
+@media (max-width:420px){.env-est{gap:5px;padding:0 14px 14px}.env-est button{font-size:11.5px;flex-direction:column;gap:3px;min-height:46px}}
