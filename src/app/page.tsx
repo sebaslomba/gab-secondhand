@@ -24,9 +24,9 @@ export default function Home() {
         <div className="wrap">
           <h2>Cómo comprar</h2>
           <ol className="steps">
-            <li className="glass"><h3>Armá tu carrito</h3><p>Sumá las prendas que quieras y tocá “Enviar”. Te abrimos WhatsApp con la lista y quedan apartadas a tu nombre {RESERVA_MIN} minutos para pagarlas.</p></li>
-            <li className="glass"><h3>Transferí al alias</h3><p>Copiá el alias y transferí el monto exacto desde tu banco o billetera.</p></li>
-            <li className="glass"><h3>Mandá el comprobante</h3><p>Te abrimos WhatsApp con el mensaje listo. Confirmamos el pago y dejamos la prenda lista para tu delivery.</p></li>
+            <li className="glass"><h3>Armá tu carrito</h3><p>Sumá las prendas que quieras y elegí tu zona para ver el envío y el total.</p></li>
+            <li className="glass"><h3>Enviá tu pedido</h3><p>Te abrimos WhatsApp con tu pedido listo para mandar. Las prendas quedan apartadas para vos {RESERVA_MIN} minutos.</p></li>
+            <li className="glass"><h3>Coordinamos con Gab</h3><p>Gab te confirma las prendas, te pasa los datos de pago y sale tu delivery.</p></li>
           </ol>
         </div>
       </section>

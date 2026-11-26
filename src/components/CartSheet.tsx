@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ALIAS, ENVIO_INTERIOR, RESERVA_MIN, ZONAS_ENVIO, gs, waLink, type Prenda } from "@/lib/data";
+import { useEffect, useState } from "react";
+import { ENVIO_INTERIOR, RESERVA_MIN, ZONAS_ENVIO, gs, waLink, type Prenda } from "@/lib/data";
 import { Garment } from "./Garment";
 import { ChevronIcon, TrashIcon, WhatsAppIcon } from "./Icons";
 import { useStore } from "./Store";
@@ -25,24 +25,12 @@ export const pedidoTexto = (ps: Prenda[], zona: string) => {
 
 export function CartSheet() {
   const { items, cart, cartOpen, closeCart, removeFromCart, reserved, reserveCart, finishOrder, setEstado, toast } = useStore();
-  const [now, setNow] = useState(() => Date.now());
-  const [copied, setCopied] = useState("Copiar");
-  const aliasRef = useRef<HTMLElement>(null);
   const [zona, setZonaState] = useState("");
   const setZona = (z: string) => { setZonaState(z); try { localStorage.setItem(ZKEY, z); } catch { /* ignorar */ } };
   useEffect(() => {
     queueMicrotask(() => { try { setZonaState(localStorage.getItem(ZKEY) ?? ""); } catch { /* ignorar */ } });
   }, []);
-  const [wasOpen, setWasOpen] = useState(cartOpen);
-  if (cartOpen !== wasOpen) { setWasOpen(cartOpen); if (cartOpen) setCopied("Copiar"); }
 
-  useEffect(() => {
-    if (!reserved) return;
-    const tick = () => setNow(Date.now());
-    const first = setTimeout(tick, 0);
-    const h = setInterval(tick, 1000);
-    return () => { clearTimeout(first); clearInterval(h); };
-  }, [reserved]);
   useEffect(() => {
     if (!cartOpen) return;
     const k = (e: KeyboardEvent) => e.key === "Escape" && closeCart();
@@ -58,29 +46,14 @@ export function CartSheet() {
   const reservadas = vigentes.filter(mine);
   const total = vigentes.reduce((a, p) => a + p.p, 0);
   const envio = precioZona(zona);
-  const totalReservado = reservadas.reduce((a, p) => a + p.p, 0) + (envio ?? 0);
+  const enviado = !!reserved && reservadas.length > 0;
 
-  const left = reserved ? Math.max(0, Math.ceil((reserved.at + RESERVA_MIN * 60000 - now) / 1000)) : 0;
-  const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
-
-  const copiar = async () => {
-    try { await navigator.clipboard.writeText(ALIAS.alias); setCopied("Copiado"); }
-    catch {
-      const sel = window.getSelection(); const r = document.createRange();
-      if (aliasRef.current && sel) { r.selectNodeContents(aliasRef.current); sel.removeAllRanges(); sel.addRange(r); }
-      setCopied("Seleccionado");
-    }
+  // Empezar de cero: libera lo apartado y vacía el carrito.
+  const nuevoPedido = () => {
+    reserved?.ids.forEach(id => setEstado(id, "av"));
+    finishOrder();
+    toast("Listo, empezaste un pedido nuevo.");
   };
-  const simularPago = () => {
-    const ids = reserved?.ids ?? [];
-    closeCart();
-    setTimeout(() => {
-      ids.forEach(id => setEstado(id, "so"));
-      finishOrder();
-      toast(`Pago confirmado. ${ids.length === 1 ? "Tu prenda ya figura como vendida" : "Tus prendas ya figuran como vendidas"}.`, "sold");
-    }, 350);
-  };
-  const comprobante = waLink(pedidoTexto(reservadas, zona).replace("Hola Gab! Quiero estos productos:", "Hola Gab! Ya transferí por estos productos:") + "\n\nTe mando el comprobante.");
 
   return (
     <>
@@ -138,22 +111,15 @@ export function CartSheet() {
               </div>
               <div className="cart-total"><span>Total a pagar</span><b><small>Gs.</small>{gs(total + (envio ?? 0))}</b></div>
 
-              {reserved && reservadas.length > 0 ? (
-                <div className="pay">
-                  <div className="timer"><span>Reservadas para vos por</span><b>{mm}:{ss}</b></div>
-                  <div className="alias">
-                    <div><small>Alias para transferir</small><strong ref={aliasRef}>{ALIAS.alias}</strong></div>
-                    <button className="copy" onClick={copiar}>{copied}</button>
-                  </div>
-                  <div className="alias"><div><small>Monto exacto{envio === null ? " (sin envío)" : " con envío"}</small><strong>Gs. {gs(totalReservado)}</strong></div></div>
-                  {pendientes.length > 0 && (
-                    <p className="demo-note" style={{ margin: 0 }}>Sumaste prendas nuevas: enviá el pedido otra vez para reservarlas también.</p>
-                  )}
-                  <button className="cta ghost" onClick={simularPago} style={{ marginTop: 0 }}>Simular pago confirmado</button>
-                  <p className="demo-note" style={{ margin: 0 }}>Solo para la demo: así se ve cuando el pago se confirma.</p>
+              {enviado ? (
+                <div className="sent">
+                  <b>Pedido enviado</b>
+                  <p>Gab te responde por WhatsApp para confirmar las prendas y pasarte los datos de pago. Mientras tanto las apartamos para vos {RESERVA_MIN} minutos.</p>
+                  {pendientes.length > 0 && <p>Sumaste prendas nuevas: tocá “Enviar” otra vez para mandar el pedido completo.</p>}
+                  <button type="button" className="linkish" onClick={nuevoPedido}>Empezar un pedido nuevo</button>
                 </div>
               ) : (
-                <p className="cart-note">Al enviar, te abrimos WhatsApp con la lista y las prendas quedan reservadas para vos {RESERVA_MIN} minutos mientras transferís.</p>
+                <p className="cart-note">Al enviar, te abrimos WhatsApp con tu pedido. Gab te confirma las prendas y te pasa los datos de pago.</p>
               )}
             </>
           )}
@@ -169,7 +135,7 @@ export function CartSheet() {
                   <WhatsAppIcon />Enviar
                 </a>
               ) : reservadas.length > 0 ? (
-                <a className="cta wa-cta" target="_blank" rel="noopener" href={comprobante}><WhatsAppIcon />Enviar comprobante</a>
+                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(reservadas, zona))}><WhatsAppIcon />Abrir WhatsApp</a>
               ) : (
                 <button className="cta" disabled>Nada disponible</button>
               )}
