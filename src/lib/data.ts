@@ -46,3 +46,15 @@ export const GASTOS = [
 
 export const gs = (n: number) => n.toLocaleString("es-PY").replace(/,/g, ".");
 export const waLink = (text: string) => `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(text)}`;
+
+// Delivery en moto con salida desde Asunción (tabla de Gab, nov 2026). Al interior va por Multienvíos y se cotiza aparte.
+export const ENVIO_INTERIOR = "Interior (Multienvíos)";
+export const ZONAS_ENVIO: { z: string; m: number }[] = [
+  { z: "Asunción", m: 20000 }, { z: "Asunción, Zeballos Cué", m: 25000 }, { z: "Asunción, Loma Pytã", m: 25000 },
+  { z: "Areguá", m: 30000 }, { z: "Capiatá, ruta 1", m: 30000 }, { z: "Capiatá, ruta 2", m: 30000 },
+  { z: "Fernando de la Mora", m: 20000 }, { z: "Guarambaré", m: 45000 }, { z: "Ypané", m: 35000 }, { z: "Itá", m: 50000 },
+  { z: "Itauguá", m: 35000 }, { z: "J. Augusto Saldívar", m: 35000 }, { z: "Lambaré", m: 20000 }, { z: "Limpio", m: 35000 },
+  { z: "Luque", m: 30000 }, { z: "Mariano R. Alonso", m: 30000 }, { z: "Ñemby", m: 30000 }, { z: "San Antonio", m: 30000 },
+  { z: "San Bernardino", m: 70000 }, { z: "San Lorenzo", m: 25000 }, { z: "Villa Elisa", m: 30000 }, { z: "Villa Hayes", m: 60000 },
+  { z: "Villeta", m: 50000 }, { z: "Caacupé", m: 85000 },
+];

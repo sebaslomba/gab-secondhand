@@ -1,19 +1,38 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ALIAS, RESERVA_MIN, gs, waLink, type Prenda } from "@/lib/data";
+import { ALIAS, ENVIO_INTERIOR, RESERVA_MIN, ZONAS_ENVIO, gs, waLink, type Prenda } from "@/lib/data";
 import { Garment } from "./Garment";
-import { TrashIcon, WhatsAppIcon } from "./Icons";
+import { ChevronIcon, TrashIcon, WhatsAppIcon } from "./Icons";
 import { useStore } from "./Store";
 
-export const pedidoTexto = (ps: Prenda[]) =>
-  `Hola Gab, quiero estas prendas:\n${ps.map(p => `• ${p.t} (${p.id})`).join("\n")}\nTotal: Gs. ${gs(ps.reduce((a, p) => a + p.p, 0))}`;
+const ZKEY = "gab-zona";
+const precioZona = (z: string) => ZONAS_ENVIO.find(x => x.z === z)?.m ?? null;
+
+// Formato de WhatsApp: "> " al inicio de la línea se ve como cita y *texto* sale en negrita.
+export const pedidoTexto = (ps: Prenda[], zona: string) => {
+  const sub = ps.reduce((a, p) => a + p.p, 0);
+  const envio = precioZona(zona);
+  return [
+    "Hola Gab! Quiero estos productos:",
+    ...ps.map(p => `> ${p.t} *[${p.id}]* · Gs. ${gs(p.p)}`),
+    "",
+    `Prendas: Gs. ${gs(sub)}`,
+    envio !== null ? `Envío a ${zona}: Gs. ${gs(envio)}` : "Envío al interior por Multienvíos: a cotizar",
+    envio !== null ? `*Total a pagar: Gs. ${gs(sub + envio)}*` : `*Total prendas: Gs. ${gs(sub)}* (falta sumar el envío)`,
+  ].join("\n");
+};
 
 export function CartSheet() {
   const { items, cart, cartOpen, closeCart, removeFromCart, reserved, reserveCart, finishOrder, setEstado, toast } = useStore();
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState("Copiar");
   const aliasRef = useRef<HTMLElement>(null);
+  const [zona, setZonaState] = useState("");
+  const setZona = (z: string) => { setZonaState(z); try { localStorage.setItem(ZKEY, z); } catch { /* ignorar */ } };
+  useEffect(() => {
+    queueMicrotask(() => { try { setZonaState(localStorage.getItem(ZKEY) ?? ""); } catch { /* ignorar */ } });
+  }, []);
   const [wasOpen, setWasOpen] = useState(cartOpen);
   if (cartOpen !== wasOpen) { setWasOpen(cartOpen); if (cartOpen) setCopied("Copiar"); }
 
@@ -38,7 +57,8 @@ export function CartSheet() {
   const pendientes = vigentes.filter(p => !mine(p));
   const reservadas = vigentes.filter(mine);
   const total = vigentes.reduce((a, p) => a + p.p, 0);
-  const totalReservado = reservadas.reduce((a, p) => a + p.p, 0);
+  const envio = precioZona(zona);
+  const totalReservado = reservadas.reduce((a, p) => a + p.p, 0) + (envio ?? 0);
 
   const left = reserved ? Math.max(0, Math.ceil((reserved.at + RESERVA_MIN * 60000 - now) / 1000)) : 0;
   const mm = String(Math.floor(left / 60)).padStart(2, "0"), ss = String(left % 60).padStart(2, "0");
@@ -96,7 +116,27 @@ export function CartSheet() {
                   </li>
                 ))}
               </ul>
-              <div className="cart-total"><span>Total</span><b><small>Gs.</small>{gs(total)}</b></div>
+              <label className="zona">
+                <span>Envío</span>
+                <span className="zona-pick">
+                  <select value={zona} onChange={e => setZona(e.target.value)} aria-label="Zona de envío">
+                    <option value="" disabled>Elegí tu zona</option>
+                    <optgroup label="Gran Asunción, delivery en moto">
+                      {ZONAS_ENVIO.map(x => <option key={x.z} value={x.z}>{x.z} · Gs. {gs(x.m)}</option>)}
+                    </optgroup>
+                    <optgroup label="Resto del país">
+                      <option value={ENVIO_INTERIOR}>{ENVIO_INTERIOR} · a cotizar</option>
+                    </optgroup>
+                  </select>
+                  <ChevronIcon />
+                </span>
+              </label>
+              {zona === ENVIO_INTERIOR && <p className="cart-note" style={{ marginTop: 6 }}>Al interior enviamos por Multienvíos. Gab te pasa el costo por WhatsApp.</p>}
+              <div className="cart-sum">
+                <div><span>Prendas</span><span>Gs. {gs(total)}</span></div>
+                <div><span>Envío</span><span>{!zona ? "Elegí tu zona" : envio !== null ? `Gs. ${gs(envio)}` : "A cotizar"}</span></div>
+              </div>
+              <div className="cart-total"><span>Total a pagar</span><b><small>Gs.</small>{gs(total + (envio ?? 0))}</b></div>
 
               {reserved && reservadas.length > 0 ? (
                 <div className="pay">
@@ -105,7 +145,7 @@ export function CartSheet() {
                     <div><small>Alias para transferir</small><strong ref={aliasRef}>{ALIAS.alias}</strong></div>
                     <button className="copy" onClick={copiar}>{copied}</button>
                   </div>
-                  <div className="alias"><div><small>Monto exacto</small><strong>Gs. {gs(totalReservado)}</strong></div></div>
+                  <div className="alias"><div><small>Monto exacto{envio === null ? " (sin envío)" : " con envío"}</small><strong>Gs. {gs(totalReservado)}</strong></div></div>
                   {pendientes.length > 0 && (
                     <p className="demo-note" style={{ margin: 0 }}>Sumaste prendas nuevas: enviá el pedido otra vez para reservarlas también.</p>
                   )}
@@ -122,8 +162,10 @@ export function CartSheet() {
           <div className="s-foot">
             <button className="cta ghost" onClick={closeCart}>Volver</button>
             <span style={{ flex: 1, minWidth: 0 }}>
-              {pendientes.length > 0 ? (
-                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(vigentes))} onClick={reserveCart}>
+              {pendientes.length > 0 && !zona ? (
+                <button className="cta" disabled>Elegí tu zona de envío</button>
+              ) : pendientes.length > 0 ? (
+                <a className="cta wa-cta" target="_blank" rel="noopener" href={waLink(pedidoTexto(vigentes, zona))} onClick={reserveCart}>
                   <WhatsAppIcon />Enviar
                 </a>
               ) : reservadas.length > 0 ? (
