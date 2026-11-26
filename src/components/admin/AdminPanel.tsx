@@ -12,7 +12,7 @@ import { Segmented } from "@/components/Segmented";
 import { useStore } from "@/components/Store";
 import { ChevronIcon } from "@/components/Icons";
 import { Filters } from "@/components/Filters";
-import { Envios, quien, type PedidoEnvio } from "@/components/admin/Envios";
+import { Direccion, Envios, PrendasPedido, quien, type PedidoEnvio } from "@/components/admin/Envios";
 
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
@@ -204,7 +204,7 @@ function Panel({ email }: { email: string }) {
   const porId = useMemo(() => new Map(prendas.map(p => [p.id, p])), [prendas]);
 
   const pendientes = pedidos.filter(p => p.estado === "pendiente" && new Date(p.vence).getTime() > ahora);
-  const historial = pedidos.filter(p => p.estado === "confirmado").slice(0, 10);
+  const historial = pedidos.filter(p => p.estado === "confirmado").slice(0, 20);
   const vendidas = prendas.filter(p => p.st === "so");
   const disponibles = prendas.filter(p => p.st === "av");
   const reservadas = prendas.filter(p => p.st === "ho");
@@ -229,6 +229,10 @@ function Panel({ email }: { email: string }) {
   const nombrar = async (p: Pedido, nombre: string) => {
     const { error } = await sb.from("pedidos").update({ cliente: nombre.trim() }).eq("id", p.id);
     await listo(error ? "No se pudo guardar el nombre." : nombre.trim() ? `Guardado: ${nombre.trim()}` : "Nombre borrado", error ? "hold" : "");
+  };
+  const guardarDireccion = async (p: PedidoEnvio, dir: string) => {
+    const { error } = await sb.from("pedidos").update({ direccion: dir.trim() }).eq("id", p.id);
+    await listo(error ? "No se pudo guardar la dirección. ¿Ya corriste direccion.sql en Supabase?" : dir.trim() ? "Dirección guardada" : "Dirección borrada", error ? "hold" : "");
   };
   const cancelar = async (p: Pedido) => {
     if (!window.confirm(`¿Cancelar ${p.cliente?.trim() ? `el pedido de ${p.cliente.trim()}` : `el pedido #${p.codigo}`}? Las prendas vuelven a estar disponibles.`)) return;
@@ -293,18 +297,8 @@ function Panel({ email }: { email: string }) {
                       <input className="order-cliente" defaultValue={p.cliente ?? ""} placeholder={`Nombre de la clienta (código #${p.codigo} en WhatsApp)`}
                         aria-label="Nombre de la clienta" onBlur={e => { if (e.target.value.trim() !== (p.cliente ?? "").trim()) void nombrar(p, e.target.value); }}
                         onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); }} />
-                      <ul>
-                        {p.prendas.map(id => {
-                          const it = porId.get(id);
-                          return (
-                            <li key={id}>
-                              {it && <div className="thumbph ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div>}
-                              <span>{it?.t ?? id}<small>{id}{it ? ` · Talle ${it.s}` : ""}</small></span>
-                              <span>{it ? `Gs. ${gs(it.p)}` : ""}</span>
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      <PrendasPedido ids={p.prendas} porId={porId} />
+                      <Direccion p={p} onGuardar={guardarDireccion} />
                       <p className="order-sum">{p.zona || "Sin zona"} · <b>Total Gs. {gs(p.total)}</b></p>
                       <div className="order-act">
                         <button className="cta ghost" onClick={() => cancelar(p)}>Cancelar</button>
@@ -317,7 +311,13 @@ function Panel({ email }: { email: string }) {
                   <>
                     <h2>Últimas ventas</h2>
                     {historial.map(p => (
-                      <div className="exp" key={p.id}><span>{quien(p)} · {p.prendas.length} {p.prendas.length === 1 ? "prenda" : "prendas"}<small>{hora(p.creado)}</small></span><span>Gs. {gs(p.total)}</span></div>
+                      <details className="exp-det" key={p.id}>
+                        <summary className="exp"><span>{quien(p)} · {p.prendas.length} {p.prendas.length === 1 ? "prenda" : "prendas"}<small>{hora(p.creado)}</small></span><span>Gs. {gs(p.total)}<i aria-hidden="true">›</i></span></summary>
+                        <div className="exp-body">
+                          <PrendasPedido ids={p.prendas} porId={porId} />
+                          <Direccion p={p} onGuardar={guardarDireccion} />
+                        </div>
+                      </details>
                     ))}
                   </>
                 )}
@@ -378,7 +378,7 @@ function Panel({ email }: { email: string }) {
             </section>
           )}
 
-          {activa === "Envíos" && <Envios pedidos={pedidos} nombres={new Map(filas.map(f => [f.id, f.titulo]))} onCambio={cargar} />}
+          {activa === "Envíos" && <Envios pedidos={pedidos} nombres={new Map(filas.map(f => [f.id, f.titulo]))} prendas={porId} onCambio={cargar} />}
 
           {activa === "Finanzas" && <Finanzas filas={filas} pedidos={pedidos} gastos={gastos} onCambio={cargar} />}
 

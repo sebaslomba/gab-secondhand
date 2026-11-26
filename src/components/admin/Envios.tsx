@@ -1,14 +1,15 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { gs } from "@/lib/data";
+import { gs, type Prenda } from "@/lib/data";
+import { Garment } from "@/components/Garment";
 import { useStore } from "@/components/Store";
 import { Segmented } from "@/components/Segmented";
 
 export type PedidoEnvio = {
   id: string; codigo: string; prendas: string[]; zona: string; total: number; estado: string; creado: string;
   pago?: "pendiente" | "pagado"; envio_fecha?: string | null; envio_metodo?: "delivery" | "courier" | null;
-  enviado?: boolean; etiquetas?: string[]; cliente?: string; nota?: string;
+  enviado?: boolean; etiquetas?: string[]; cliente?: string; nota?: string; direccion?: string;
   envio_estado?: EstadoEnvio | null;
 };
 export type EstadoEnvio = "reservado" | "pendiente" | "enviado" | "entregado";
@@ -44,8 +45,8 @@ function nombreDia(s: string) {
   return d.toLocaleDateString("es-PY", { weekday: "long", day: "numeric", month: "long" });
 }
 
-export function Envios({ pedidos, nombres, onCambio }: {
-  pedidos: PedidoEnvio[]; nombres: Map<string, string>; onCambio: () => Promise<void>;
+export function Envios({ pedidos, nombres, prendas, onCambio }: {
+  pedidos: PedidoEnvio[]; nombres: Map<string, string>; prendas: Map<string, Prenda>; onCambio: () => Promise<void>;
 }) {
   const sb = supabase()!;
   const { toast } = useStore();
@@ -68,6 +69,12 @@ export function Envios({ pedidos, nombres, onCambio }: {
     toast(`${quien(p)}: ${ESTADOS.find(x => x.k === e)!.largo.toLowerCase()}`);
     await onCambio();
     setCambios(c => { const n = { ...c }; delete n[p.id]; return n; });
+  };
+
+  const guardar = async (p: PedidoEnvio, datos: Partial<PedidoEnvio>, ok: string) => {
+    const { error } = await sb.from("pedidos").update(datos).eq("id", p.id);
+    toast(error ? ("direccion" in datos ? "No se pudo guardar. ¿Ya corriste direccion.sql en Supabase?" : "No se pudo guardar. Probá de nuevo.") : ok, error ? "hold" : "");
+    await onCambio();
   };
 
   const cargar = useCallback(async () => {
@@ -102,7 +109,10 @@ export function Envios({ pedidos, nombres, onCambio }: {
     grupos.set(k, [...(grupos.get(k) ?? []), p]);
   });
   const sinPagar = porEnviar.filter(p => p.pago !== "pagado").length;
-  const tarjeta = (p: PedidoEnvio) => <TarjetaPedido key={p.id} p={p} nombres={nombres} porId={porId} onAbrir={() => setEditando(p)} onEstado={e => void cambiarEstado(p, e)} />;
+  const tarjeta = (p: PedidoEnvio) => <TarjetaPedido key={p.id} p={p} nombres={nombres} porId={porId} prendas={prendas}
+    onAbrir={() => setEditando(p)} onEstado={e => void cambiarEstado(p, e)}
+    onDireccion={(q, dir) => guardar(q, { direccion: dir.trim() }, dir.trim() ? "Dirección guardada" : "Dirección borrada")}
+    onDia={dia => void guardar(p, { envio_fecha: dia || null }, dia ? `Envío: ${nombreDia(dia)}` : "Sin día de envío")} />;
 
   return (
     <div className="env">
@@ -113,7 +123,7 @@ export function Envios({ pedidos, nombres, onCambio }: {
       </div>
 
       <div className="env-tabs">
-        <Segmented label="Vista de envíos" options={["Por enviar", "Calendario", "Entregados", "Etiquetas"]} value={vista} onChange={setVista} />
+        <Segmented label="Vista de envíos" options={["Por enviar", "Calendario", "Etiquetas", "Historial"]} value={vista} onChange={setVista} />
       </div>
 
       <div className="env-vista" key={vista}>
@@ -134,7 +144,7 @@ export function Envios({ pedidos, nombres, onCambio }: {
       )}
 
       {vista === "Calendario" && (
-        <Calendario pedidos={porEnviar.concat(enviados)} sinEnvio={sinEnvio} porId={porId} tarjeta={tarjeta}
+        <Calendario pedidos={porEnviar} sinEnvio={sinEnvio} porId={porId} tarjeta={tarjeta}
           onDia={async (dia, bloquear) => {
             const { error } = bloquear
               ? await sb.from("dias_sin_envio").insert({ fecha: dia })
@@ -144,11 +154,11 @@ export function Envios({ pedidos, nombres, onCambio }: {
           }} />
       )}
 
-      {vista === "Entregados" && (
+      {vista === "Historial" && (
         <section className="panel">
-          <h2>Ya entregados</h2>
-          {enviados.length === 0 && <p className="empty-row">Todavía no marcaste pedidos como entregados.</p>}
-          {[...enviados].sort((a, b) => (b.envio_fecha ?? "").localeCompare(a.envio_fecha ?? "")).slice(0, 40).map(tarjeta)}
+          <h2>Historial · entregados</h2>
+          {enviados.length === 0 && <p className="empty-row">Cuando marques un pedido como Entregado, sale de la lista y queda guardado acá.</p>}
+          {[...enviados].sort((a, b) => (b.envio_fecha ?? b.creado).localeCompare(a.envio_fecha ?? a.creado)).map(tarjeta)}
         </section>
       )}
 
@@ -170,9 +180,40 @@ export function Envios({ pedidos, nombres, onCambio }: {
   );
 }
 
-function TarjetaPedido({ p, nombres, porId, onAbrir, onEstado }: {
-  p: PedidoEnvio; nombres: Map<string, string>; porId: Map<string, Etiqueta>; onAbrir: () => void; onEstado: (e: EstadoEnvio) => void;
+// Prendas de un pedido, con foto chica (o el dibujo si no tiene).
+export function PrendasPedido({ ids, porId }: { ids: string[]; porId: Map<string, Prenda> }) {
+  return (
+    <ul className="order-items">
+      {ids.map(id => {
+        const it = porId.get(id);
+        return (
+          <li key={id}>
+            {it ? <div className="thumbph ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div> : <span />}
+            <span>{it?.t ?? id}<small>{id}{it ? ` · Talle ${it.s}` : ""}</small></span>
+            <span>{it ? `Gs. ${gs(it.p)}` : ""}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+// Dirección de envío: la clienta la pasa por WhatsApp y Gab la pega acá. Se guarda al salir del campo.
+export function Direccion({ p, onGuardar }: { p: PedidoEnvio; onGuardar: (p: PedidoEnvio, dir: string) => Promise<void> }) {
+  return (
+    <label className="order-dir">
+      <span>Dirección de envío{p.zona ? <small> · {p.zona}</small> : null}</span>
+      <textarea rows={2} defaultValue={p.direccion ?? ""} placeholder="Pegá la dirección que te pasó por WhatsApp"
+        onBlur={e => { if (e.target.value.trim() !== (p.direccion ?? "").trim()) void onGuardar(p, e.target.value); }} />
+    </label>
+  );
+}
+
+function TarjetaPedido({ p, nombres, porId, prendas, onAbrir, onEstado, onDireccion, onDia }: {
+  p: PedidoEnvio; nombres: Map<string, string>; porId: Map<string, Etiqueta>; prendas: Map<string, Prenda>; onAbrir: () => void;
+  onEstado: (e: EstadoEnvio) => void; onDireccion: (p: PedidoEnvio, dir: string) => Promise<void>; onDia: (dia: string) => void;
 }) {
+  const [abierto, setAbierto] = useState(false);
   const pagado = p.pago === "pagado";
   const est = estadoDe(p);
   return (
@@ -193,6 +234,19 @@ function TarjetaPedido({ p, nombres, porId, onAbrir, onEstado }: {
       </span>
       {p.nota && <small className="env-nota">{p.nota}</small>}
     </button>
+    <button type="button" className="env-ver" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}>
+      {abierto ? "Ocultar detalle" : "Ver prendas y dirección"}<i aria-hidden="true">›</i>
+    </button>
+    {abierto && (
+      <div className="exp-body">
+        <PrendasPedido ids={p.prendas} porId={prendas} />
+        <Direccion p={p} onGuardar={onDireccion} />
+        <label className="order-dir">
+          <span>Día de envío</span>
+          <input type="date" value={p.envio_fecha ?? ""} onChange={e => onDia(e.target.value)} />
+        </label>
+      </div>
+    )}
     <div className="env-est" role="group" aria-label="Estado del envío">
       {ESTADOS.map((x, i) => {
         const paso = ESTADOS.findIndex(y => y.k === est);
