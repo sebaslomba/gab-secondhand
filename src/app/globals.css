@@ -105,11 +105,6 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .seg button{position:relative;z-index:1;border:0;background:none;padding:7px 14px;border-radius:9px;font-size:14px;font-weight:500;white-space:nowrap}
 .seg .thumb{position:absolute;top:3px;bottom:3px;left:0;border-radius:9px;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12),0 1px 1px rgba(0,0,0,.04);transition:transform .35s var(--ios),width .35s var(--ios)}
 .seg button[aria-pressed="true"]{font-weight:600}
-.sizes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
-.size{min-width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:transparent;font-weight:600;font-size:14px;transition:background .2s,color .2s,border-color .2s}
-.size.all{border-radius:22px;padding:0 16px}
-.size:hover{border-color:var(--petal-ink)}
-.size[aria-pressed="true"]{background:var(--petal);border-color:var(--petal-ink)}
 
 /* Grid + cards */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px}
@@ -311,3 +306,32 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .cart-empty .cta{width:auto;padding:14px 28px;margin-top:8px}
 .cta.wa-cta{display:flex;align-items:center;justify-content:center;gap:8px}
 .cta.wa-cta svg{width:20px;height:20px}
+/* ---- Filtros de la tienda: dos botones parejos que despliegan una grilla ---- */
+.filters{margin-bottom:24px;max-width:560px}
+.filter-toggles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.filter-toggle{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;padding:8px 14px 8px 16px;border-radius:18px;border:1.5px solid var(--line);background:rgba(255,252,247,.7);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:var(--fg);text-align:left;transition:background .2s,border-color .2s,transform .2s var(--ios)}
+.filter-toggle:active{transform:scale(.98)}
+.filter-toggle .ft-text{display:grid;min-width:0;line-height:1.2}
+.filter-toggle small{font-size:12px;color:var(--muted);font-weight:500}
+.filter-toggle b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.filter-toggle svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .35s var(--ios)}
+.filter-toggle[aria-expanded="true"]{border-color:var(--petal-ink);background:var(--surface)}
+.filter-toggle[aria-expanded="true"] svg{transform:rotate(180deg)}
+.filter-toggle[data-active="true"]{background:var(--petal);border-color:var(--petal-ink)}
+.filter-panel{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .4s var(--ios),opacity .25s}
+.filter-panel[data-open="true"]{grid-template-rows:1fr;opacity:1}
+.fp-inner{overflow:hidden;min-height:0}
+.fp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-top:10px}
+.fp-grid button{height:46px;border-radius:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;transition:background .2s,border-color .2s,transform .2s var(--ios)}
+.fp-grid button:hover{border-color:var(--petal-ink)}
+.fp-grid button:active{transform:scale(.96)}
+.fp-grid button[aria-pressed="true"]{background:var(--petal);border-color:var(--petal-ink)}
+.fp-clear{display:block;margin:10px auto 2px;border:0;background:none;color:var(--petal-ink);font-weight:600;font-size:14px;padding:6px 10px}
+@media (min-width:700px){.fp-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.filters{max-width:none}.filter-toggles{max-width:560px}}
+
+/* ---- Volver arriba ---- */
+.to-top{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:var(--fg);font-size:14px;font-weight:600;box-shadow:var(--shadow);opacity:0;transform:translateY(16px) scale(.9);pointer-events:none;transition:opacity .3s,transform .4s var(--ios),background .2s}
+.to-top[data-show="true"]{opacity:1;transform:none;pointer-events:auto}
+.to-top:hover{background:var(--petal)}
+.to-top:active{transform:scale(.94)}
+.to-top svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
