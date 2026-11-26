@@ -15,6 +15,14 @@ const kaushan = Kaushan_Script({ subsets: ["latin"], weight: "400", variable: "-
 export const metadata: Metadata = {
   title: "Gab Secondhand",
   description: "Ropa de segunda mano de la mejor calidad, con envíos seguros. Cada prenda es única.",
+  icons: {
+    icon: [
+      { url: "/gab-icon.png?v=2", type: "image/png", sizes: "32x32" },
+      { url: "/gab-favicon.ico?v=2", sizes: "any" },
+    ],
+    shortcut: "/gab-favicon.ico?v=2",
+    apple: "/apple-icon.png?v=2",
+  },
 };
 export const viewport: Viewport = { themeColor: "#F5F0E6", viewportFit: "cover" };
 
