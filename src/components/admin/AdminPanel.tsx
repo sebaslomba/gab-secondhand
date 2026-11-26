@@ -19,7 +19,7 @@ type Pedido = { id: string; codigo: string; prendas: string[]; zona: string; tot
 
 const OPCIONES = ["Disponible", "Reservada", "Vendida"];
 const A_ESTADO: Record<string, Estado> = { Disponible: "av", Reservada: "ho", Vendida: "so" };
-const SECCIONES = ["Pedidos", "Prendas", "Nueva prenda"];
+const SECCIONES = ["Pedidos", "Prendas", "Nueva prenda", "Cuenta"];
 // Colores suaves para las ilustraciones hasta que haya fotos.
 const TONOS = [["#F4C9D6", "#F7E3E9"], ["#6C8DB5", "#DDE6EF"], ["#E8DCC4", "#F3E9E3"], ["#8E6A5B", "#EDE1D8"], ["#A9A4A0", "#E7E2DD"]];
 
@@ -64,11 +64,13 @@ export function AdminPanel() {
   return esAdmin ? <Panel email={session.user.email ?? ""} /> : <main className="wrap admin view view-in" />;
 }
 
-// Ingreso sin contraseña: llega un email con un código (y un link) para entrar.
+// Ingreso con email y contraseña (el celular puede guardarla y completarla con Face ID).
+// Si se olvida la contraseña, se puede entrar con un código que llega por email.
 function Ingreso() {
   const sb = supabase()!;
-  const [paso, setPaso] = useState<"email" | "codigo">("email");
+  const [paso, setPaso] = useState<"clave" | "email" | "codigo">("clave");
   const [email, setEmail] = useState("");
+  const [clave, setClave] = useState("");
   const [codigo, setCodigo] = useState("");
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
@@ -83,6 +85,12 @@ function Ingreso() {
     if (error) setError(error.status === 429 ? "Esperá un minuto antes de pedir otro código." : "Ese email no tiene acceso al panel.");
     else setPaso("codigo");
   };
+  const entrarConClave = async (e: React.FormEvent) => {
+    e.preventDefault(); setCargando(true); setError("");
+    const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password: clave });
+    setCargando(false);
+    if (error) setError(error.status === 429 ? "Demasiados intentos. Esperá un minuto." : "El email o la contraseña no son correctos.");
+  };
   const entrar = async (e: React.FormEvent) => {
     e.preventDefault(); setCargando(true); setError("");
     const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: codigo.trim(), type: "email" });
@@ -92,15 +100,30 @@ function Ingreso() {
 
   return (
     <main className="wrap admin view view-in">
-      {paso === "email" ? (
-        <form className="login" onSubmit={pedirCodigo}>
+      {paso === "clave" ? (
+        <form className="login" onSubmit={entrarConClave}>
           <h1>Panel de Gab</h1>
-          <p>Escribí tu email y te mandamos un código para entrar. No hace falta contraseña.</p>
+          <p>Solo para la administración de la tienda.</p>
+          <label htmlFor="lg-user">Email
+            <input id="lg-user" type="email" required autoComplete="username" inputMode="email" value={email} onChange={e => setEmail(e.target.value)} />
+          </label>
+          <label htmlFor="lg-pass">Contraseña
+            <input id="lg-pass" type="password" required autoComplete="current-password" value={clave} onChange={e => setClave(e.target.value)} />
+          </label>
+          {error && <p className="form-err" role="alert">{error}</p>}
+          <button className="cta" type="submit" disabled={cargando}>{cargando ? "Entrando…" : "Ingresar"}</button>
+          <button type="button" className="linkish" onClick={() => { setPaso("email"); setError(""); }}>Me olvidé la contraseña: entrar con un código por email</button>
+        </form>
+      ) : paso === "email" ? (
+        <form className="login" onSubmit={pedirCodigo}>
+          <h1>Entrar con código</h1>
+          <p>Escribí tu email y te mandamos un código para entrar. Adentro podés poner una contraseña nueva en “Cuenta”.</p>
           <label htmlFor="lg-mail">Email
             <input id="lg-mail" type="email" required autoComplete="email" inputMode="email" value={email} onChange={e => setEmail(e.target.value)} />
           </label>
           {error && <p className="form-err" role="alert">{error}</p>}
           <button className="cta" type="submit" disabled={cargando}>{cargando ? "Enviando…" : "Mandarme el código"}</button>
+          <button type="button" className="linkish" onClick={() => { setPaso("clave"); setError(""); }}>Volver a entrar con contraseña</button>
         </form>
       ) : (
         <form className="login" onSubmit={entrar}>
@@ -113,6 +136,7 @@ function Ingreso() {
           {error && <p className="form-err" role="alert">{error}</p>}
           <button className="cta" type="submit" disabled={cargando || codigo.length < 6}>{cargando ? "Entrando…" : "Entrar"}</button>
           <button type="button" className="linkish" onClick={() => { setPaso("email"); setCodigo(""); setError(""); }}>Cambiar email o pedir otro código</button>
+          <button type="button" className="linkish" onClick={() => { setPaso("clave"); setCodigo(""); setError(""); }}>Volver a entrar con contraseña</button>
         </form>
       )}
     </main>
@@ -249,6 +273,7 @@ function Panel({ email }: { email: string }) {
         </section>
       )}
 
+      {seccion === "Cuenta" && <Cuenta email={email} />}
       {seccion === "Nueva prenda" && <NuevaPrenda filas={filas} onListo={async t => { await listo(`Publicaste “${t}”`); setSeccion("Prendas"); }} />}
     </main>
   );
@@ -297,6 +322,31 @@ function NuevaPrenda({ filas, onListo }: { filas: FilaPrenda[]; onListo: (t: str
         <p className="demo-note">Las fotos se suman en el próximo paso. Por ahora la prenda se muestra con un dibujo.</p>
         {error && <p className="form-err" role="alert">{error}</p>}
         <button className="cta" type="submit" disabled={guardando || !f.titulo.trim() || !num(f.precio)}>{guardando ? "Publicando…" : "Publicar en la tienda"}</button>
+      </form>
+    </section>
+  );
+}
+
+function Cuenta({ email }: { email: string }) {
+  const sb = supabase()!;
+  const { toast } = useStore();
+  const [clave, setClave] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const guardar = async (e: React.FormEvent) => {
+    e.preventDefault(); setGuardando(true);
+    const { error } = await sb.auth.updateUser({ password: clave });
+    setGuardando(false);
+    if (error) { toast("No se pudo cambiar. Usá al menos 8 caracteres.", "hold"); return; }
+    setClave(""); toast("Contraseña guardada");
+  };
+  return (
+    <section className="panel">
+      <h2>Cuenta</h2>
+      <form className="new-item" onSubmit={guardar}>
+        <p className="demo-note" style={{ textAlign: "left", margin: 0 }}>Entraste como {email}. Desde este dispositivo no te vamos a pedir nada hasta que toques “Salir”.</p>
+        <input type="email" autoComplete="username" value={email} readOnly hidden />
+        <label>Contraseña nueva<input type="password" autoComplete="new-password" minLength={8} required value={clave} onChange={e => setClave(e.target.value)} /></label>
+        <button className="cta" type="submit" disabled={guardando || clave.length < 8}>{guardando ? "Guardando…" : "Guardar contraseña"}</button>
       </form>
     </section>
   );
