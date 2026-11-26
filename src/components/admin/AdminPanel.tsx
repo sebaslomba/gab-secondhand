@@ -16,7 +16,7 @@ import { Envios, type PedidoEnvio } from "@/components/admin/Envios";
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
   costo: number; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
-  reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null;
+  reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null; fotos?: string[] | null;
 };
 export type Gasto = { id: string; fecha: string; concepto: string; monto: number; tipo?: "ingreso" | "egreso" };
 type Pedido = PedidoEnvio & { vence: string };
@@ -31,7 +31,7 @@ const vigente = (f: FilaPrenda): Estado =>
 const aPrenda = (f: FilaPrenda): Prenda => ({
   id: f.id, t: f.titulo, b: f.marca, s: f.talle, p: f.precio, c: f.categoria,
   g: (DIBUJO_POR_CATEGORIA[f.categoria] ?? f.dibujo) as Prenda["g"], col: f.color, bg: f.fondo,
-  st: vigente(f), cond: f.condicion, cost: f.costo,
+  st: vigente(f), cond: f.condicion, cost: f.costo, fotos: f.fotos ?? [],
 });
 // Sin mayúsculas ni acentos, para buscar "cardigan" y encontrar "Cárdigan".
 const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -391,8 +391,30 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
     precio: fmt(prenda?.precio ?? 0), categoria: prenda?.categoria ?? "Remeras", condicion: prenda?.condicion ?? CONDICIONES[1],
     costo: fmt(prenda?.costo ?? 0), estado: prenda ? ESTADO_LABEL[vigente(prenda)][0] : "Disponible",
   });
+  const [fotos, setFotos] = useState<string[]>(prenda?.fotos ?? []);
+  const [subiendo, setSubiendo] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const subir = async (archivos: FileList | null) => {
+    if (!archivos?.length) return;
+    setError("");
+    const lista = [...archivos].slice(0, 8);
+    setSubiendo(n => n + lista.length);
+    for (const a of lista) {
+      try {
+        const blob = await comprimir(a);
+        const ruta = `prendas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+        const { error } = await sb.storage.from("fotos").upload(ruta, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+        if (error) throw error;
+        const url = sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl;
+        setFotos(x => [...x, url]);
+      } catch {
+        setError("No se pudo subir una foto. Si es la primera vez, falta correr supabase/fotos.sql en Supabase.");
+      } finally {
+        setSubiendo(n => n - 1);
+      }
+    }
+  };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF(x => ({ ...x, [k]: e.target.value }));
   const num = (s: string) => Number(s.replace(/\D/g, "")) || 0;
   const money = (k: "precio" | "costo") => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -404,6 +426,7 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
     const datos = {
       titulo: f.titulo.trim(), marca: f.marca.trim() || "Sin marca", talle: f.talle, precio: num(f.precio),
       categoria: f.categoria, condicion: f.condicion, costo: num(f.costo), dibujo: DIBUJO_POR_CATEGORIA[f.categoria] ?? "tee",
+      ...(fotos.length || prenda?.fotos?.length ? { fotos } : {}),
     };
     let r;
     if (prenda) {
@@ -427,6 +450,23 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
 
   return (
     <form className="new-item" onSubmit={guardar}>
+      <div className="field-seg"><span>Fotos <small className="env-hint">La primera es la portada</small></span>
+        <div className="fotos-edit">
+          {fotos.map((u, i) => (
+            <div key={u} className={`fotos-item${i === 0 ? " portada" : ""}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={u} alt={`Foto ${i + 1}`} />
+              <button type="button" className="fotos-x" aria-label={`Quitar foto ${i + 1}`} onClick={() => setFotos(x => x.filter(y => y !== u))}>×</button>
+              {i > 0 && <button type="button" className="fotos-portada" onClick={() => setFotos(x => [u, ...x.filter(y => y !== u)])}>Portada</button>}
+            </div>
+          ))}
+          {Array.from({ length: subiendo }, (_, i) => <div key={`s${i}`} className="fotos-item cargando" aria-label="Subiendo foto" />)}
+          <label className="fotos-add">
+            <input type="file" accept="image/*" multiple onChange={e => { void subir(e.target.files); e.target.value = ""; }} />
+            <span>+</span><small>Agregar fotos</small>
+          </label>
+        </div>
+      </div>
       <label>¿Qué es?<input required value={f.titulo} onChange={set("titulo")} placeholder="Ej: Campera de jean oversize" /></label>
       <div className="two">
         <label>Precio (Gs.)<input required inputMode="numeric" value={f.precio} onChange={money("precio")} placeholder="120.000" /></label>
@@ -445,11 +485,10 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
           <Segmented label="En la tienda" options={OPCIONES} value={f.estado} onChange={o => setF(x => ({ ...x, estado: o }))} />
         </div>
       )}
-      {!prenda && <p className="demo-note">Las fotos se suman en el próximo paso. Por ahora la prenda se muestra con un dibujo.</p>}
       {error && <p className="form-err" role="alert">{error}</p>}
       <div className="order-act">
         {onCancelar && <button type="button" className="cta ghost" onClick={onCancelar}>Cancelar</button>}
-        <button className="cta" type="submit" disabled={guardando || !f.titulo.trim() || !num(f.precio)}>
+        <button className="cta" type="submit" disabled={guardando || subiendo > 0 || !f.titulo.trim() || !num(f.precio)}>
           {guardando ? "Guardando…" : prenda ? "Guardar cambios" : "Publicar en la tienda"}
         </button>
       </div>
@@ -662,4 +701,15 @@ function Anotar({ tipo, sinTabla, onCambio }: { tipo: "ingreso" | "egreso"; sinT
       <button className="cta" type="submit" disabled={guardando || !num(f.monto)}>{guardando ? "Guardando…" : tipo === "ingreso" ? "Anotar ingreso" : "Anotar gasto"}</button>
     </form>
   );
+}
+
+// Achica la foto del celular (a 1600 px y JPEG) para que suba rápido y la tienda cargue liviana.
+async function comprimir(archivo: File): Promise<Blob> {
+  const bmp = await createImageBitmap(archivo);
+  const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * escala); c.height = Math.round(bmp.height * escala);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  return new Promise((ok, mal) => c.toBlob(b => (b ? ok(b) : mal(new Error("foto"))), "image/jpeg", 0.82));
 }

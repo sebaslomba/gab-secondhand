@@ -39,7 +39,7 @@ export function ProductSheet() {
               <div className="grabber" />
               <div className="s-grid">
                 <div className="ph s-photo" style={{ ["--tint" as string]: shown.bg }}>
-                  <Garment it={shown} />
+                  <Garment it={shown} todas />
                   <span className="status"><i className={`dot ${cls}`} />{lab}</span>
                   <span className="talle">{shown.s}</span>
                 </div>

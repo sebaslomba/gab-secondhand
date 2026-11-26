@@ -2,7 +2,7 @@ export type Estado = "av" | "ho" | "so";
 export type Prenda = {
   id: string; t: string; b: string; s: string; p: number; c: string;
   g: "tee" | "dress" | "jeans" | "jacket" | "skirt" | "sweater";
-  col: string; bg: string; st: Estado; cond: string; cost: number;
+  col: string; bg: string; st: Estado; cond: string; cost: number; fotos?: string[];
 };
 
 export const WHATSAPP = "595972217237";
@@ -62,7 +62,7 @@ export const ZONAS_ENVIO: { z: string; m: number }[] = [
 // Fila de la vista "catalogo" de la base (ver supabase/schema.sql).
 export type FilaCatalogo = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string;
-  condicion: string; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
+  condicion: string; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida"; fotos?: string[] | null;
 };
 export const DIBUJO_POR_CATEGORIA: Record<string, Prenda["g"]> = {
   Remeras: "tee", Vestidos: "dress", Pantalones: "jeans", Polleras: "skirt", Abrigos: "jacket", Shorts: "skirt",
@@ -73,5 +73,5 @@ export const CONDICIONES = ["Como nuevo", "Muy buen estado", "Buen estado"];
 export const deFila = (f: FilaCatalogo): Prenda => ({
   id: f.id, t: f.titulo, b: f.marca, s: f.talle, p: f.precio, c: f.categoria,
   g: (["tee", "dress", "jeans", "jacket", "skirt", "sweater"].includes(f.dibujo) ? f.dibujo : DIBUJO_POR_CATEGORIA[f.categoria] ?? "tee") as Prenda["g"],
-  col: f.color, bg: f.fondo, st: ESTADO_DE_DB[f.estado], cond: f.condicion, cost: 0,
+  col: f.color, bg: f.fondo, st: ESTADO_DE_DB[f.estado], cond: f.condicion, cost: 0, fotos: f.fotos ?? [],
 });

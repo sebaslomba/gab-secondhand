@@ -9,7 +9,19 @@ const SHAPES: Record<Prenda["g"], React.ReactNode> = {
   sweater: (<><path d="M64 34 86 26q14 12 28 0l22 8 32 32 8 130h-24l-8-100v122H56V96l-8 100H24l8-130Z" /><path d="M56 206h88M24 186h24M152 186h24" stroke="rgba(0,0,0,.15)" strokeWidth="5" /></>),
 };
 
-// Ilustración provisoria hasta tener fotos reales de cada prenda.
-export function Garment({ it }: { it: Prenda }) {
+// Foto de la prenda; si todavía no tiene, una ilustración. Con "todas", se pasan las fotos deslizando.
+export function Garment({ it, todas = false }: { it: Prenda; todas?: boolean }) {
+  const fotos = it.fotos ?? [];
+  if (fotos.length && todas && fotos.length > 1) {
+    return (
+      <div className="ph-galeria" aria-label={`Fotos de ${it.t}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {fotos.map((u, i) => <img key={u} src={u} alt={`${it.t}, foto ${i + 1}`} loading={i ? "lazy" : "eager"} />)}
+        <span className="ph-cuenta">{fotos.length} fotos · deslizá</span>
+      </div>
+    );
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  if (fotos.length) return <img className="ph-img" src={fotos[0]} alt={it.t} loading="lazy" decoding="async" />;
   return <svg viewBox="0 0 200 240" fill={it.col} aria-hidden="true">{SHAPES[it.g]}</svg>;
 }
