@@ -601,7 +601,9 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
   ));
   const boton = (k: string, label: string, monto: number, cls: string) => (
     <button type="button" className={`fin-btn ${cls}${abierto === k ? " on" : ""}`} aria-expanded={abierto === k} onClick={() => setAbierto(abierto === k ? null : k)}>
-      <small>{label}</small><b>{monto < 0 ? "−" : ""}Gs. {gs(Math.abs(monto))}</b><ChevronIcon />
+      <small>{label}</small>
+      <b>{monto < 0 ? "−" : ""}Gs. {gs(Math.abs(monto))}</b>
+      <span className="fin-ver">{abierto === k ? "Ocultar detalle" : "Ver detalle"}<ChevronIcon /></span>
     </button>
   );
 
@@ -626,7 +628,7 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
       <div className="fin-btns">
         {boton("in", "Ingreso", r.ingreso, "in")}
         {boton("out", "Egreso", r.egreso, "out")}
-        {boton("gan", r.ganancia < 0 ? "Pérdida" : "Ganancia", r.ganancia, r.ganancia < 0 ? "out" : "gan")}
+        {boton("gan", "Ganancia", r.ganancia, "gan")}
       </div>
 
       {abierto === "in" && (
@@ -649,7 +651,7 @@ function Finanzas({ filas, pedidos, gastos, onCambio }: { filas: FilaPrenda[]; p
         <section className="panel fin-det">
           <div className="exp"><span>Ingreso</span><span className="t-in">Gs. {gs(r.ingreso)}</span></div>
           <div className="exp"><span>Egreso</span><span className="t-out">− Gs. {gs(r.egreso)}</span></div>
-          <div className="exp fin-total"><span>{r.ganancia < 0 ? "Pérdida" : "Ganancia"}</span><span>Gs. {gs(r.ganancia)}</span></div>
+          <div className="exp fin-total"><span>Ganancia</span><span>Gs. {gs(r.ganancia)}</span></div>
         </section>
       )}
 
