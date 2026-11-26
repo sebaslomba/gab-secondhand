@@ -26,12 +26,9 @@ export function Nav() {
           {admin ? (
             <Link href="/">Salir del panel</Link>
           ) : (
-            <>
-              <Link href="/#como" className="hide-xs">Cómo comprar</Link>
-              <Link href="/tienda" className="shop-btn" aria-current={path === "/tienda" ? "page" : undefined}>
-                <BagIcon />Tienda
-              </Link>
-            </>
+            <Link href="/tienda" className="shop-btn" aria-current={path === "/tienda" ? "page" : undefined}>
+              <BagIcon />Tienda
+            </Link>
           )}
         </nav>
         {!admin && (
