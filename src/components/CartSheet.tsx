@@ -80,7 +80,7 @@ export function CartSheet() {
       toast(`Pago confirmado. ${ids.length === 1 ? "Tu prenda ya figura como vendida" : "Tus prendas ya figuran como vendidas"}.`, "sold");
     }, 350);
   };
-  const comprobante = waLink(`Hola Gab! Ya transferí Gs. ${gs(totalReservado)} por mi pedido (${reservadas.map(p => p.id).join(", ")}). Te mando el comprobante.`);
+  const comprobante = waLink(pedidoTexto(reservadas, zona).replace("Hola Gab! Quiero estos productos:", "Hola Gab! Ya transferí por estos productos:") + "\n\nTe mando el comprobante.");
 
   return (
     <>
