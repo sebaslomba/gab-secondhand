@@ -660,9 +660,11 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .env-open:hover{background:rgba(244,201,214,.18)}
 .env-est{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:0 18px 14px}
 .env-est button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:6px 4px;border-radius:14px;border:1.5px solid var(--line);background:transparent;font:inherit;font-size:12.5px;font-weight:600;line-height:1.15;color:var(--muted);cursor:pointer;text-align:center;transition:background .25s var(--ios),border-color .25s var(--ios),color .25s,transform .2s var(--ios)}
-.env-est button i{flex:none;width:8px;height:8px;border-radius:50%;background:var(--c);opacity:.9}
+.env-est button i{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10.5px;font-weight:700;background:var(--c);color:var(--espresso)}
 .env-est button:active{transform:scale(.95)}
 .env-est button[aria-pressed="true"]{background:var(--c);border-color:transparent;color:var(--espresso);box-shadow:inset 0 0 0 1.5px rgba(62,39,35,.18)}
-.env-est button[aria-pressed="true"] i{background:var(--espresso);opacity:.55}
+.env-est button[aria-pressed="true"] i{background:var(--espresso);color:var(--ivory)}
+.env-est button.hecho{background:color-mix(in srgb,var(--c) 40%,transparent);border-color:transparent;color:var(--fg)}
+.env-est{position:relative}
 .env-pill.est{color:var(--espresso)}
 @media (max-width:420px){.env-est{gap:5px;padding:0 14px 14px}.env-est button{font-size:11.5px;flex-direction:column;gap:3px;min-height:46px}}

@@ -11,16 +11,15 @@ export type PedidoEnvio = {
   enviado?: boolean; etiquetas?: string[]; cliente?: string; nota?: string;
   envio_estado?: EstadoEnvio | null;
 };
-export type EstadoEnvio = "retirar" | "delivery" | "camino" | "entregado";
-// Los cuatro pasos de un envío, cada uno con su color pastel.
+export type EstadoEnvio = "reservado" | "pendiente" | "enviado" | "entregado";
+// Los cuatro pasos de un envío, en orden, cada uno con su color pastel. No hay retiro: todo sale por envío.
 export const ESTADOS: { k: EstadoEnvio; corto: string; largo: string; color: string }[] = [
-  { k: "retirar", corto: "Por retirar", largo: "Falta que lo busque el delivery", color: "#FBD9C4" },
-  { k: "delivery", corto: "Con delivery", largo: "Ya lo tiene el delivery", color: "#DDD3F0" },
-  { k: "camino", corto: "En camino", largo: "En camino a la clienta", color: "#CFE3F3" },
+  { k: "reservado", corto: "Reservado", largo: "Reservado", color: "#F4C9D6" },
+  { k: "pendiente", corto: "Pendiente de envío", largo: "Pendiente de envío", color: "#F8EDB8" },
+  { k: "enviado", corto: "Enviado", largo: "Enviado", color: "#CFE3F3" },
   { k: "entregado", corto: "Entregado", largo: "Entregado", color: "#CDEBD8" },
 ];
-// Si todavía no se corrió estado-envio.sql, se usa el viejo "enviado".
-export const estadoDe = (p: PedidoEnvio): EstadoEnvio => p.envio_estado ?? (p.enviado ? "entregado" : "retirar");
+export const estadoDe = (p: PedidoEnvio): EstadoEnvio => p.envio_estado ?? (p.enviado ? "entregado" : "reservado");
 type Etiqueta = { id: string; nombre: string; color: string };
 
 export const PASTELES = [
@@ -195,11 +194,15 @@ function TarjetaPedido({ p, nombres, porId, onAbrir, onEstado }: {
       {p.nota && <small className="env-nota">{p.nota}</small>}
     </button>
     <div className="env-est" role="group" aria-label="Estado del envío">
-      {ESTADOS.map(x => (
-        <button key={x.k} type="button" aria-pressed={est === x.k} title={x.largo} style={{ ["--c" as string]: x.color }} onClick={() => onEstado(x.k)}>
-          <i />{x.corto}
-        </button>
-      ))}
+      {ESTADOS.map((x, i) => {
+        const paso = ESTADOS.findIndex(y => y.k === est);
+        return (
+          <button key={x.k} type="button" aria-pressed={est === x.k} className={i < paso ? "hecho" : undefined} title={`Paso ${i + 1}: ${x.largo}`}
+            style={{ ["--c" as string]: x.color }} onClick={() => onEstado(x.k)}>
+            <i>{i + 1}</i>{x.corto}
+          </button>
+        );
+      })}
     </div>
     </div>
   );
@@ -235,7 +238,7 @@ function EditorEnvio({ p, etiquetas, sinEnvio, nombres, onCerrar, onListo, onEti
     const { error } = await sb.from("pedidos").update({
       pago: f.pago === "Pagado" ? "pagado" : "pendiente", envio_metodo: metodo, envio_fecha: f.fecha || null,
       cliente: f.cliente.trim(), nota: f.nota.trim(), etiquetas: [...f.etiquetas], enviado,
-      ...("envio_estado" in p ? { envio_estado: enviado ? "entregado" : (estadoDe(p) === "entregado" ? "retirar" : estadoDe(p)) } : {}),
+      ...("envio_estado" in p ? { envio_estado: enviado ? "entregado" : (estadoDe(p) === "entregado" ? "enviado" : estadoDe(p)) } : {}),
     }).eq("id", p.id);
     setGuardando(false);
     if (error) { setError("No se pudo guardar. Probá de nuevo."); return; }
