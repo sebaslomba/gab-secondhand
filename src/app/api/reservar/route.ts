@@ -28,7 +28,11 @@ export async function POST(req: Request) {
     method: "POST",
     body: JSON.stringify({ p_ids: ids, p_zona: zona, p_envio: envio, p_minutos: RESERVA_MIN, p_anterior: anterior }),
   });
-  if (!r.ok) return NextResponse.json({ error: "db" }, { status: 502 });
+  if (!r.ok) {
+    // Queda en los logs de Vercel para saber qué respondió la base.
+    console.error("reservar_prendas falló", r.status, await r.text());
+    return NextResponse.json({ error: "db" }, { status: 502 });
+  }
   const out = (await r.json()) as Rpc;
   return NextResponse.json(out, { status: out.ok ? 200 : 409 });
 }

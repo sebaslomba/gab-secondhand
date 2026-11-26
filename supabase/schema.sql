@@ -114,7 +114,8 @@ begin
 
   select sum(precio)::integer + greatest(coalesce(p_envio, 0), 0) into v_total from prendas where id = any(v_ids);
   loop
-    v_codigo := upper(substr(encode(gen_random_bytes(4), 'hex'), 1, 5));
+    -- md5 + gen_random_uuid vienen con Postgres: no dependen de pgcrypto, que en Supabase vive en otro esquema.
+    v_codigo := upper(substr(md5(gen_random_uuid()::text), 1, 5));
     exit when not exists (select 1 from pedidos where codigo = v_codigo);
   end loop;
 
