@@ -10,6 +10,7 @@ import { Garment } from "@/components/Garment";
 import { Segmented } from "@/components/Segmented";
 import { useStore } from "@/components/Store";
 import { ChevronIcon } from "@/components/Icons";
+import { Filters } from "@/components/Filters";
 
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
@@ -30,6 +31,9 @@ const aPrenda = (f: FilaPrenda): Prenda => ({
   g: (DIBUJO_POR_CATEGORIA[f.categoria] ?? f.dibujo) as Prenda["g"], col: f.color, bg: f.fondo,
   st: vigente(f), cond: f.condicion, cost: f.costo,
 });
+// Sin mayúsculas ni acentos, para buscar "cardigan" y encontrar "Cárdigan".
+const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const ESTADOS_FILTRO = ["Todas", "Disponible", "Reservada", "Vendida"];
 const hora = (iso: string) => new Date(iso).toLocaleString("es-PY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export function AdminPanel() {
@@ -152,6 +156,9 @@ function Panel({ email }: { email: string }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [ahora, setAhora] = useState(0);
   const [editando, setEditando] = useState<FilaPrenda | null>(null);
+  const [busca, setBusca] = useState("");
+  const [tipo, setTipo] = useState("Todo");
+  const [estado, setEstado] = useState("Todas");
 
   const cargar = useCallback(async () => {
     const [p, o] = await Promise.all([
@@ -181,6 +188,17 @@ function Panel({ email }: { email: string }) {
   const vendidas = prendas.filter(p => p.st === "so");
   const disponibles = prendas.filter(p => p.st === "av");
   const activa = seccion ?? "Pedidos";
+  // Cada palabra escrita tiene que aparecer en nombre, marca, talle, tipo, condición o código.
+  const filtradas = useMemo(() => {
+    const palabras = norm(busca).split(/\s+/).filter(Boolean);
+    return filas.map((f, i) => ({ f, it: prendas[i] })).filter(({ f, it }) => {
+      if (tipo !== "Todo" && it.c !== tipo) return false;
+      if (estado !== "Todas" && it.st !== A_ESTADO[estado]) return false;
+      const texto = norm(`${it.t} ${it.b} ${it.s} ${it.c} ${it.cond ?? ""} ${f.id}`);
+      return palabras.every(w => texto.includes(w));
+    });
+  }, [filas, prendas, busca, tipo, estado]);
+  const hayFiltro = !!busca.trim() || tipo !== "Todo" || estado !== "Todas";
 
   const confirmar = async (p: Pedido) => {
     const { error } = await sb.rpc("confirmar_pedido", { p_pedido: p.id });
@@ -272,16 +290,45 @@ function Panel({ email }: { email: string }) {
           )}
 
           {activa === "Prendas" && (
-            <section className="panel">
+            <section className="panel adm-prendas">
               <h2>Mis prendas</h2>
+              <div className="adm-tools">
+                <label className="adm-search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+                  <input type="search" value={busca} onChange={e => setBusca(e.target.value)}
+                    placeholder="Buscar por nombre, marca, talle…" aria-label="Buscar prendas" enterKeyHint="search" />
+                  {busca && <button type="button" aria-label="Borrar búsqueda" onClick={() => setBusca("")}>×</button>}
+                </label>
+                <Filters groups={[
+                  { key: "tipo", label: "Tipo de ropa", value: tipo, active: tipo !== "Todo", options: CATEGORIAS, selected: tipo, onPick: setTipo },
+                  { key: "estado", label: "Estado", value: estado, active: estado !== "Todas", options: ESTADOS_FILTRO, selected: estado, onPick: setEstado },
+                ]} />
+                {hayFiltro && (
+                  <p className="adm-count">
+                    {filtradas.length} {filtradas.length === 1 ? "prenda" : "prendas"}
+                    <button type="button" onClick={() => { setBusca(""); setTipo("Todo"); setEstado("Todas"); }}>Ver todas</button>
+                  </p>
+                )}
+              </div>
               {prendas.length === 0 && <p className="empty-row">Todavía no cargaste prendas.</p>}
-              {prendas.map((it, i) => (
-                <button type="button" className="row row-btn" key={it.id} onClick={() => setEditando(filas[i])}>
-                  <div className="thumbph ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div>
-                  <div className="t"><b>{it.t}</b><small>{it.id} · Talle {it.s} · Gs. {gs(it.p)}</small></div>
-                  <span className={`st-pill ${ESTADO_LABEL[it.st][1]}`}>{ESTADO_LABEL[it.st][0]}</span>
-                </button>
-              ))}
+              {prendas.length > 0 && filtradas.length === 0 && <p className="empty-row">No encontramos prendas con esa búsqueda.</p>}
+              <div className="adm-grid">
+                {filtradas.map(({ f, it }) => {
+                  const [lab, cls] = ESTADO_LABEL[it.st];
+                  return (
+                    <button type="button" key={it.id} className={`card glass mini${it.st === "so" ? " is-sold" : ""}${it.st === "ho" ? " is-hold" : ""}`}
+                      onClick={() => setEditando(f)} aria-label={`Editar ${it.t}, talle ${it.s}, ${lab}`}>
+                      <div className="ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div>
+                      <div className="info">
+                        <div className="top"><span className="brand">{it.b}</span><span className={`st-pill ${cls}`}>{lab}</span></div>
+                        <h3>{it.t}</h3>
+                        <small className="mini-meta">{it.id} · Talle {it.s}</small>
+                        <div className="price"><small>Gs.</small>{gs(it.p)}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           )}
 

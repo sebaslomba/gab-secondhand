@@ -454,3 +454,28 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 @media (max-width:899px){.adm:not(.in) .adm-nav li button[aria-current]{background:none}}
 /* Selectores con la misma estética que los campos de texto, con flecha para saber que se despliegan */
 .new-item select{appearance:none;-webkit-appearance:none;padding-right:38px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%233E2723' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;cursor:pointer}
+/* Panel > Prendas: buscador, filtros y galería compacta */
+.adm-tools{padding:4px 16px 4px}
+.adm-tools .filters{margin:12px 0 0;max-width:none}
+.adm-tools .filter-toggles{max-width:560px}
+.adm-search{display:flex;align-items:center;gap:10px;min-height:50px;padding:0 10px 0 16px;border-radius:18px;border:1.5px solid var(--line);background:rgba(255,252,247,.7);transition:border-color .2s,background .2s}
+.adm-search:focus-within{border-color:var(--petal-ink);background:var(--surface)}
+.adm-search svg{flex:none;width:20px;height:20px;fill:none;stroke:var(--muted);stroke-width:2.2;stroke-linecap:round}
+.adm-search input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--fg);outline:none;padding:12px 0}
+.adm-search input::-webkit-search-cancel-button{display:none}
+.adm-search button{flex:none;width:30px;height:30px;border-radius:15px;border:0;background:var(--chip);color:var(--fg);font-size:18px;line-height:1;cursor:pointer}
+.adm-count{display:flex;align-items:center;gap:10px;margin:12px 2px 0;font-size:14px;color:var(--muted)}
+.adm-count button{border:0;background:none;color:var(--petal-ink);font:inherit;font-weight:600;padding:0;cursor:pointer}
+.adm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:14px 16px 18px}
+@media (max-width:540px){.adm-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:12px 12px 16px}}
+.card.mini{border-radius:20px}
+.card.mini .ph{margin:6px 6px 0;border-radius:15px;aspect-ratio:1/1}
+.card.mini .ph svg{width:64%}
+.card.mini .info{padding:9px 11px 11px;gap:1px}
+.card.mini .top{gap:6px}
+.card.mini .brand{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.card.mini .st-pill{font-size:11px;padding:2px 8px}
+.card.mini h3{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card.mini .mini-meta{font-size:12px;color:var(--muted)}
+.card.mini .price{font-size:20px;margin-top:4px}
+.card.mini.is-sold .info{opacity:.55}
