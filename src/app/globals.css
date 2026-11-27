@@ -50,27 +50,21 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .hero h1 .brush{font-family:var(--script);font-weight:400;letter-spacing:0;display:inline-block;position:relative;padding:0 .18em;margin-left:.02em;z-index:0}
 .hero h1 .brush::before{content:"";position:absolute;inset:18% -2% 8% -2%;background:var(--petal);border-radius:40% 8% 50% 10%/60% 20% 70% 30%;transform:rotate(-2deg);z-index:-1;opacity:.95}
 
-/* Full-width clothes rail */
+/* Destacadas: tarjetas "vidriera" con arco, en carrusel. Sirve para cualquier foto (maniquí, varias prendas, otro ángulo). */
 .rackband{position:relative;margin-top:28px}
-.rod{position:absolute;top:30px;left:0;right:0;height:12px;background:linear-gradient(180deg,#9B7D72 0%,#5C3F37 45%,#3E2723 70%,#2B1B18 100%);box-shadow:0 6px 14px -6px rgba(62,39,35,.5);z-index:1}
-.rod::before,.rod::after{content:"";position:absolute;top:-30px;width:10px;height:48px;border-radius:4px;background:linear-gradient(90deg,#5C3F37,#3E2723)}
-.rod::before{left:max(16px,env(safe-area-inset-left,0px))} .rod::after{right:max(16px,env(safe-area-inset-right,0px))}
-.hangers{position:relative;z-index:2;display:flex;justify-content:safe center;gap:22px;overflow-x:auto;scroll-snap-type:x mandatory;padding:18px max(40px,env(safe-area-inset-left,0px)) 36px;scrollbar-width:none}
+.hangers{display:flex;justify-content:safe center;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px max(24px,env(safe-area-inset-left,0px)) 32px;scrollbar-width:none}
 .hangers::-webkit-scrollbar{display:none}
-.hanger{flex:none;width:184px;scroll-snap-align:center;transform-origin:50% 22px;border:0;background:none;padding:0;text-align:left;animation:hang-in .9s var(--ios) both;animation-delay:calc(var(--i)*80ms)}
-.hanger[data-ready]{animation:none}
-/* Mientras el mouse está encima se balancea sin parar; al salir termina la vuelta en curso (ver Rack.tsx). */
-.hanger[data-ready][data-swing]{animation:swing 1.1s ease-in-out infinite}
-.hanger svg.hk{display:block;width:120px;height:64px;margin:0 auto -6px;overflow:visible}
-.hanger svg.hk path{fill:none;stroke:#5C3F37;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
-@keyframes hang-in{from{opacity:0;transform:translateX(-60px) rotate(8deg)}60%{opacity:1;transform:translateX(4px) rotate(-3deg)}to{transform:none}}
-@keyframes swing{0%{transform:rotate(0)}20%{transform:rotate(5deg)}45%{transform:rotate(-3.5deg)}65%{transform:rotate(2deg)}85%{transform:rotate(-.8deg)}100%{transform:rotate(0)}}
-.hanger .glass{border-radius:24px}
-.hanger .ph{aspect-ratio:1/1.05}
+.hanger{flex:none;width:200px;scroll-snap-align:center;border:0;background:none;padding:0;text-align:left;animation:vitrina-in .7s var(--ios) both;animation-delay:calc(var(--i)*70ms);transition:transform .35s var(--ios)}
+.hanger:hover,.hanger:focus-visible{transform:translateY(-6px)}
+@keyframes vitrina-in{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.hanger .glass{border-radius:100px 100px 22px 22px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.hanger .ph{aspect-ratio:3/4;border-radius:0}
+.hanger .ph .ph-img{object-position:50% 30%}
 .hanger .meta{padding:10px 14px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-.hanger .meta b{font-family:var(--display);font-size:22px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hanger .meta b{font-family:var(--display);font-size:20px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .hanger .meta small{color:var(--muted);white-space:nowrap;font-size:13px}
-@media (max-width:640px){.hanger{width:150px}.hanger .meta{padding:8px 10px 12px}.hanger .meta b{font-size:18px}.hanger .meta small{font-size:12px}.hanger svg.hk{width:100px;height:54px}.rod{top:26px}}
+@media (max-width:640px){.hanger{width:158px}.hanger .glass{border-radius:79px 79px 18px 18px}.hanger .meta{padding:8px 10px 12px}.hanger .meta b{font-size:17px}.hanger .meta small{font-size:12px}}
+@media (prefers-reduced-motion:reduce){.hanger{animation:none;transition:none}}
 
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
 .dot.hold{background:var(--hold)} .dot.sold{background:var(--sold)}
