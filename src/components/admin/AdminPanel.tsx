@@ -389,12 +389,6 @@ function Panel({ email }: { email: string }) {
 
       {/* Fuera de <main>: su animación de entrada usa transform y atraparía lo que es "fixed". */}
       {createPortal(<>
-      {activa === "Prendas" && (
-        <button type="button" className={`adm-fab${abierta ? " off" : ""}`} onClick={() => abrir(null)} aria-label="Agregar prenda nueva">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-        </button>
-      )}
-
       <div className={`scrim ed-scrim${abierta ? " open" : ""}`} onClick={cerrar} />
       <div className={`sheet ed${abierta ? " open" : ""}`} role="dialog" aria-modal="true"
         aria-label={hoja.p ? "Editar prenda" : "Nueva prenda"} aria-hidden={!abierta}>
