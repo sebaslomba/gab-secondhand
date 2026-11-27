@@ -7,6 +7,7 @@ import { Footer } from "@/components/Footer";
 import { ProductSheet } from "@/components/ProductSheet";
 import { CartSheet } from "@/components/CartSheet";
 import { Toast } from "@/components/Toast";
+import { WhatsAppFab } from "@/components/WhatsAppFab";
 
 const bricolage = Bricolage_Grotesque({ subsets: ["latin"], weight: ["400", "600", "800"], variable: "--font-bricolage" });
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-inter" });
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Nav />
           {children}
           <Footer />
+          <WhatsAppFab />
           <ProductSheet />
           <CartSheet />
           <Toast />

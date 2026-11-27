@@ -361,7 +361,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 @media (min-width:700px){.fp-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.filters{max-width:none}.filter-toggles{max-width:560px}}
 
 /* ---- Volver arriba ---- */
-.to-top{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:var(--fg);font-size:14px;font-weight:600;box-shadow:var(--shadow);opacity:0;transform:translateY(16px) scale(.9);pointer-events:none;transition:opacity .3s,transform .4s var(--ios),background .2s}
+.to-top{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:var(--fg);font-size:14px;font-weight:600;box-shadow:var(--shadow);opacity:0;transform:translateY(16px) scale(.9);pointer-events:none;transition:opacity .3s,transform .4s var(--ios),background .2s}
 .to-top[data-show="true"]{opacity:1;transform:none;pointer-events:auto}
 .to-top:hover{background:var(--petal)}
 .to-top:active{transform:scale(.94)}
@@ -616,7 +616,7 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .adm-add span{font-size:20px;line-height:1;font-weight:500}
 .adm-add:hover{background:var(--btn-hover)}
 .adm-add:active{transform:scale(.96)}
-@media (min-width:760px){
+
 .ed-scrim{background:rgba(62,39,35,.28);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .sheet.ed{inset:0;max-width:none;max-height:none;height:100dvh;border-radius:0;border:0;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;transform:translateY(100%);transition:transform .55s var(--ios),visibility 0s .55s}
 .sheet.ed.open{transform:none;transition:transform .55s var(--ios),visibility 0s}
@@ -673,3 +673,10 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .env-est{position:relative}
 .env-pill.est{color:var(--espresso)}
 @media (max-width:420px){.env-est{gap:5px;padding:0 14px 14px}.env-est button{font-size:11.5px;flex-direction:column;gap:3px;min-height:46px}}
+
+/* ---- WhatsApp flotante (todas las páginas de la tienda). "Arriba" queda encima de este botón. ---- */
+.wa-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;box-shadow:0 2px 4px rgba(62,39,35,.12),0 12px 28px -10px rgba(18,140,74,.7);transition:transform .2s var(--ios),background .2s}
+.wa-fab:hover{background:#1EBE5A}
+.wa-fab:active{transform:scale(.92)}
+.wa-fab svg{width:30px;height:30px}
+@media print{.wa-fab{display:none}}
