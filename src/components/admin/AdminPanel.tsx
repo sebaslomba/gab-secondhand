@@ -745,13 +745,15 @@ function Anotar({ tipo, sinTabla, onCambio }: { tipo: "ingreso" | "egreso"; sinT
   );
 }
 
-// Achica la foto del celular (a 1600 px y JPEG) para que suba rápido y la tienda cargue liviana.
+// Achica la foto del celular (lado mayor 1600 px, JPEG) sin recortarla: las tarjetas son 3:4 como la cámara del celular para que suba rápido y la tienda cargue liviana.
 async function comprimir(archivo: File): Promise<Blob> {
   const bmp = await createImageBitmap(archivo);
   const escala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
   c.width = Math.round(bmp.width * escala); c.height = Math.round(bmp.height * escala);
-  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  const ctx = c.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high"; // reducción más nítida (sin esto el navegador achica "rápido" y queda borroso)
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
   bmp.close();
-  return new Promise((ok, mal) => c.toBlob(b => (b ? ok(b) : mal(new Error("foto"))), "image/jpeg", 0.82));
+  return new Promise((ok, mal) => c.toBlob(b => (b ? ok(b) : mal(new Error("foto"))), "image/jpeg", 0.86));
 }
