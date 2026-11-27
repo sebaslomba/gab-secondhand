@@ -1,12 +1,9 @@
 "use client";
 import Link from "next/link";
 import { Rack } from "@/components/Rack";
-import { useStore } from "@/components/Store";
 import { RESERVA_MIN } from "@/lib/data";
 
 export default function Home() {
-  const { items } = useStore();
-  const disponibles = items.filter(i => i.st === "av").length;
   return (
     <main className="view view-in">
       <section className="wrap hero">
@@ -18,7 +15,6 @@ export default function Home() {
           Ver toda la tienda
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </Link>
-        <span id="avail-line">{disponibles} prendas disponibles hoy</span>
       </div>
       <section className="how" id="como">
         <div className="wrap">
