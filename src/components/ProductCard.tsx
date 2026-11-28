@@ -19,13 +19,13 @@ export function ProductCard({ it, index, animate }: { it: Prenda; index: number;
       <div className="ph" style={{ ["--tint" as string]: it.bg }}>
         <Garment it={it} />
         {inCart(it.id) && !sold && <span className="incart">En tu carrito</span>}
-        {liston && <div className={`ribbon ${liston[1]}`} aria-hidden><span>{liston[0]}</span></div>}
       </div>
       <div className="info">
         <div className="top"><span className="brand">{it.b}</span><span className="state"><i className={`dot ${cls}`} />{lab}</span></div>
         <div className="title-row"><h3>{it.t}</h3><span className="size-chip">Talle {it.s}</span></div>
         <div className="price"><small>Gs.</small>{gs(it.p)}{oferta && <s className="was">{gs(it.pa!)}</s>}</div>
       </div>
+      {liston && <div className={`ribbon ${liston[1]}`} aria-hidden><span>{liston[0]}</span></div>}
     </button>
   );
 }

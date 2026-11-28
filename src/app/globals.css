@@ -122,20 +122,22 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .card .state{font-size:12px;font-weight:600;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
 .card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 /* Listón diagonal en la esquina superior derecha: vendida, reservada u oferta. */
-.ribbon{position:absolute;top:0;right:0;width:112px;height:112px;overflow:hidden;pointer-events:none;z-index:3}
-.ribbon span{position:absolute;top:24px;right:-40px;width:170px;padding:7px 0;transform:rotate(45deg);text-align:center;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;line-height:1;box-shadow:0 6px 14px -6px rgba(62,39,35,.55);animation:ribbon-in .6s var(--ios) both}
-.ribbon span::before{content:"";position:absolute;inset:3px 0;border-top:1px dashed rgba(255,255,255,.55);border-bottom:1px dashed rgba(255,255,255,.55)}
-.ribbon.sold span{background:var(--espresso);color:var(--ivory)}
-.ribbon.hold span{background:var(--hold);color:#FFF8EE}
-.ribbon.sale span{background:#D7263D;color:#fff;font-size:14px;box-shadow:0 8px 18px -6px rgba(215,38,61,.7)}
-@keyframes ribbon-in{from{transform:translate(30px,-30px) rotate(45deg);opacity:0}to{transform:rotate(45deg);opacity:1}}
+.ribbon{position:absolute;top:-7px;right:-7px;width:124px;height:124px;overflow:hidden;pointer-events:none;z-index:4;--rb:var(--petal);--rb-fold:#C9718E;--rb-fg:var(--espresso)}
+.ribbon::before,.ribbon::after{content:"";position:absolute;border:4px solid var(--rb-fold);border-top-color:transparent;border-right-color:transparent}
+.ribbon::before{top:0;left:0}
+.ribbon::after{bottom:0;right:0}
+.ribbon span{position:absolute;top:28px;left:-22px;width:190px;padding:8px 0;transform:rotate(45deg);background:var(--rb);color:var(--rb-fg);text-align:center;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;line-height:1;box-shadow:0 4px 8px -4px rgba(62,39,35,.45)}
+.ribbon.hold{--rb:var(--hold);--rb-fold:#7A4509;--rb-fg:#FFF8EE}
+.ribbon.sale{--rb:#D7263D;--rb-fold:#8E1324;--rb-fg:#fff}
+.ribbon.sale span{font-size:14px;box-shadow:0 4px 8px -4px rgba(142,19,36,.6)}
+@media (max-width:540px){.ribbon{top:-5px;right:-5px;width:92px;height:92px}.ribbon::before,.ribbon::after{border-width:3px}.ribbon span{top:20px;left:-17px;width:142px;padding:6px 0;font-size:10px}.ribbon.sale span{font-size:11px}}
+.card.glass{overflow:visible}
 .card.is-sold{cursor:default}
 .card.is-sold:hover,.card.is-sold:active{transform:none;box-shadow:none}
 .card.is-sold:hover .ph svg,.card.is-sold:hover .ph .ph-img{transform:none}
 .card.is-sale{border-color:rgba(215,38,61,.4)}
 .card.is-sale .price{color:#C21F35}
 .price .was{font-size:.5em;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:6px}
-@media (max-width:540px){.ribbon{width:84px;height:84px}.ribbon span{top:17px;right:-38px;width:140px;padding:5px 0;font-size:10px}.ribbon.sale span{font-size:11px}}
 .card.is-hold{border-color:rgba(178,107,18,.55)}
 .card.is-hold .state{color:var(--hold)}
 .card.is-hold .price{color:var(--muted)}
