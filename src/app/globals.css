@@ -121,11 +121,21 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .card.is-sold .ph svg,.card.is-sold .info{opacity:.45}
 .card .state{font-size:12px;font-weight:600;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
 .card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.hold-ov{position:absolute;inset:0;display:grid;place-items:center;background:rgba(245,240,230,.55);backdrop-filter:blur(3px) grayscale(.4);-webkit-backdrop-filter:blur(3px) grayscale(.4);opacity:0;transition:opacity .4s var(--ios);z-index:2}
-.hold-ov span{display:grid;justify-items:center;gap:2px;background:rgba(255,252,247,.9);border:1.5px solid var(--hold);color:var(--fg);border-radius:18px;padding:10px 16px;font-weight:700;font-size:15px;box-shadow:0 10px 24px -12px rgba(178,107,18,.6);text-align:center}
-.hold-ov span small{font-weight:500;font-size:12px;color:var(--muted)}
-.hold-ov svg{width:22px;height:22px;fill:none;stroke:var(--hold);stroke-width:2;stroke-linecap:round}
-.card.is-hold .hold-ov{opacity:1}
+/* Listón diagonal en la esquina superior derecha: vendida, reservada u oferta. */
+.ribbon{position:absolute;top:0;right:0;width:112px;height:112px;overflow:hidden;pointer-events:none;z-index:3}
+.ribbon span{position:absolute;top:24px;right:-40px;width:170px;padding:7px 0;transform:rotate(45deg);text-align:center;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;line-height:1;box-shadow:0 6px 14px -6px rgba(62,39,35,.55);animation:ribbon-in .6s var(--ios) both}
+.ribbon span::before{content:"";position:absolute;inset:3px 0;border-top:1px dashed rgba(255,255,255,.55);border-bottom:1px dashed rgba(255,255,255,.55)}
+.ribbon.sold span{background:var(--espresso);color:var(--ivory)}
+.ribbon.hold span{background:var(--hold);color:#FFF8EE}
+.ribbon.sale span{background:#D7263D;color:#fff;font-size:14px;box-shadow:0 8px 18px -6px rgba(215,38,61,.7)}
+@keyframes ribbon-in{from{transform:translate(30px,-30px) rotate(45deg);opacity:0}to{transform:rotate(45deg);opacity:1}}
+.card.is-sold{cursor:default}
+.card.is-sold:hover,.card.is-sold:active{transform:none;box-shadow:none}
+.card.is-sold:hover .ph svg,.card.is-sold:hover .ph .ph-img{transform:none}
+.card.is-sale{border-color:rgba(215,38,61,.4)}
+.card.is-sale .price{color:#C21F35}
+.price .was{font-size:.5em;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:6px}
+@media (max-width:540px){.ribbon{width:84px;height:84px}.ribbon span{top:17px;right:-38px;width:140px;padding:5px 0;font-size:10px}.ribbon.sale span{font-size:11px}}
 .card.is-hold{border-color:rgba(178,107,18,.55)}
 .card.is-hold .state{color:var(--hold)}
 .card.is-hold .price{color:var(--muted)}
@@ -133,12 +143,6 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .card.is-hold:hover .ph svg{transform:none}
 
 /* Sold brush stamp */
-.stamp{position:absolute;left:-6%;right:-6%;top:42%;height:84px;display:grid;place-items:center;transform:rotate(-8deg);pointer-events:none;z-index:2}
-.stamp i{position:absolute;inset:0;background:var(--petal);border-radius:46% 12% 52% 18%/70% 30% 60% 40%;clip-path:inset(0 100% 0 0);transition:clip-path .7s var(--ios)}
-.stamp span{position:relative;font-family:var(--script);font-size:40px;color:#3E2723;opacity:0;transform:translateY(6px) scale(.9);transition:opacity .4s .45s,transform .5s .45s var(--ios)}
-.card.is-sold .stamp i{clip-path:inset(0 0 0 0)}
-.card.is-sold .stamp span{opacity:1;transform:none}
-@media (max-width:540px){.stamp{height:60px}.stamp span{font-size:28px}}
 
 .empty{grid-column:1/-1;text-align:center;padding:48px 16px;color:var(--muted);display:grid;justify-items:center;gap:14px;background:var(--surface);border:1px dashed var(--line);border-radius:26px}
 .empty b{font-family:var(--display);font-size:24px;color:var(--fg);letter-spacing:-.02em}

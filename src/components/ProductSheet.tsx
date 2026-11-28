@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ESTADO_LABEL, gs } from "@/lib/data";
+import { ESTADO_LABEL, enOferta, gs } from "@/lib/data";
 import { Garment } from "./Garment";
 import { useStore } from "./Store";
 
@@ -46,7 +46,7 @@ export function ProductSheet() {
                 <div className="s-info">
                   <h3 id="s-title">{shown.t}</h3>
                   <div className="facts"><span>{shown.b}</span><span>Talle {shown.s}</span><span>{shown.cond}</span><span>{shown.id}</span></div>
-                  <div className="price"><small>Gs.</small>{gs(shown.p)}</div>
+                  <div className="price"><small>Gs.</small>{gs(shown.p)}{enOferta(shown) && <s className="was">{gs(shown.pa!)}</s>}</div>
                   {shown.st === "ho" && !mine && (
                     <p className="demo-note" style={{ textAlign: "left" }}>Otra persona la reservó. Si no se confirma el pago, vuelve a estar disponible.</p>
                   )}

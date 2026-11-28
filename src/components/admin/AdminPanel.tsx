@@ -17,7 +17,7 @@ import { Direccion, Envios, PrendasPedido, quien, type PedidoEnvio } from "@/com
 type FilaPrenda = {
   id: string; titulo: string; marca: string; talle: string; precio: number; categoria: string; condicion: string;
   costo: number; dibujo: string; color: string; fondo: string; estado: "disponible" | "reservada" | "vendida";
-  reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null; fotos?: string[] | null;
+  reservada_hasta: string | null; pedido_id: string | null; creada: string; vendida_en?: string | null; fotos?: string[] | null; precio_antes?: number | null;
 };
 export type Gasto = { id: string; fecha: string; concepto: string; monto: number; tipo?: "ingreso" | "egreso" };
 type Pedido = PedidoEnvio & { vence: string };
@@ -32,7 +32,7 @@ const vigente = (f: FilaPrenda): Estado =>
 const aPrenda = (f: FilaPrenda): Prenda => ({
   id: f.id, t: f.titulo, b: f.marca, s: f.talle, p: f.precio, c: f.categoria,
   g: (DIBUJO_POR_CATEGORIA[f.categoria] ?? f.dibujo) as Prenda["g"], col: f.color, bg: f.fondo,
-  st: vigente(f), cond: f.condicion, cost: f.costo, fotos: f.fotos ?? [],
+  st: vigente(f), cond: f.condicion, cost: f.costo, fotos: f.fotos ?? [], pa: f.precio_antes ?? undefined,
 });
 // Sin mayúsculas ni acentos, para buscar "cardigan" y encontrar "Cárdigan".
 const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -423,7 +423,7 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
   const [f, setF] = useState({
     titulo: prenda?.titulo ?? "", marca: prenda?.marca === "Sin marca" ? "" : prenda?.marca ?? "", talle: prenda?.talle ?? "M",
     precio: fmt(prenda?.precio ?? 0), categoria: prenda?.categoria ?? "Remeras", condicion: prenda?.condicion ?? CONDICIONES[1],
-    costo: fmt(prenda?.costo ?? 0), estado: prenda ? ESTADO_LABEL[vigente(prenda)][0] : "Disponible",
+    costo: fmt(prenda?.costo ?? 0), antes: fmt(prenda?.precio_antes ?? 0), estado: prenda ? ESTADO_LABEL[vigente(prenda)][0] : "Disponible",
   });
   const [fotos, setFotos] = useState<string[]>(prenda?.fotos ?? []);
   const [subiendo, setSubiendo] = useState(0);
@@ -451,7 +451,7 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
   };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF(x => ({ ...x, [k]: e.target.value }));
   const num = (s: string) => Number(s.replace(/\D/g, "")) || 0;
-  const money = (k: "precio" | "costo") => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const money = (k: "precio" | "costo" | "antes") => (e: React.ChangeEvent<HTMLInputElement>) =>
     setF(x => ({ ...x, [k]: e.target.value.replace(/\D/g, "") ? gs(num(e.target.value)) : "" }));
   const talles = TALLES.includes(f.talle) ? TALLES : [f.talle, ...TALLES];
 
@@ -461,6 +461,8 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
       titulo: f.titulo.trim(), marca: f.marca.trim() || "Sin marca", talle: f.talle, precio: num(f.precio),
       categoria: f.categoria, condicion: f.condicion, costo: num(f.costo), dibujo: DIBUJO_POR_CATEGORIA[f.categoria] ?? "tee",
       ...(fotos.length || prenda?.fotos?.length ? { fotos } : {}),
+      // Solo se manda si se usa, así no falla antes de correr supabase/oferta.sql.
+      ...(num(f.antes) || prenda?.precio_antes ? { precio_antes: num(f.antes) > num(f.precio) ? num(f.antes) : null } : {}),
     };
     let r;
     if (prenda) {
@@ -514,6 +516,9 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
         <label>Marca<input value={f.marca} onChange={set("marca")} placeholder="Opcional" /></label>
         <label>Lo que te costó<input inputMode="numeric" value={f.costo} onChange={money("costo")} placeholder="Solo lo ves vos" /></label>
       </div>
+      <label>Precio antes (para ponerla en oferta)<input inputMode="numeric" value={f.antes} onChange={money("antes")} placeholder="Vacío = sin oferta" />
+        {num(f.antes) > 0 && num(f.antes) <= num(f.precio) && <small className="env-hint">Tiene que ser mayor que el precio para que salga en oferta</small>}
+      </label>
       {prenda && (
         <div className="field-seg"><span>En la tienda</span>
           <Segmented label="En la tienda" options={OPCIONES} value={f.estado} onChange={o => setF(x => ({ ...x, estado: o }))} />
