@@ -125,15 +125,12 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .card .state{font-size:12px;font-weight:600;color:var(--ok);display:inline-flex;align-items:center;gap:5px}
 .card .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 /* Listón diagonal en la esquina superior derecha: vendida, reservada u oferta. */
-.ribbon{position:absolute;top:-7px;right:-7px;width:124px;height:124px;overflow:hidden;pointer-events:none;z-index:4;--rb:var(--petal);--rb-fold:#C9718E;--rb-fg:var(--espresso)}
-.ribbon::before,.ribbon::after{content:"";position:absolute;border:4px solid var(--rb-fold);border-top-color:transparent;border-right-color:transparent}
-.ribbon::before{top:0;left:0}
-.ribbon::after{bottom:0;right:0}
-.ribbon span{position:absolute;top:28px;left:-22px;width:190px;padding:8px 0;transform:rotate(45deg);background:var(--rb);color:var(--rb-fg);text-align:center;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;line-height:1;box-shadow:0 4px 8px -4px rgba(62,39,35,.45)}
+.ribbon{position:absolute;top:0;right:0;width:118px;height:118px;overflow:hidden;border-top-right-radius:26px;pointer-events:none;z-index:4;--rb:var(--petal);--rb-fold:#C9718E;--rb-fg:var(--espresso)}
+.ribbon span{position:absolute;top:30px;left:-14px;width:180px;padding:8px 0;transform:rotate(45deg);background:var(--rb);color:var(--rb-fg);text-align:center;font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;line-height:1;box-shadow:0 4px 8px -4px rgba(62,39,35,.45)}
 .ribbon.hold{--rb:var(--hold);--rb-fold:#7A4509;--rb-fg:#FFF8EE}
 .ribbon.sale{--rb:#D7263D;--rb-fold:#8E1324;--rb-fg:#fff}
 .ribbon.sale span{font-size:14px;box-shadow:0 4px 8px -4px rgba(142,19,36,.6)}
-@media (max-width:540px){.ribbon{top:-5px;right:-5px;width:92px;height:92px}.ribbon::before,.ribbon::after{border-width:3px}.ribbon span{top:20px;left:-17px;width:142px;padding:6px 0;font-size:10px}.ribbon.sale span{font-size:11px}}
+@media (max-width:540px){.ribbon{width:88px;height:88px}.ribbon span{top:24px;left:-12px;width:136px;padding:6px 0;font-size:10px}.ribbon.sale span{font-size:11px}}
 .card.glass{overflow:visible}
 .card.is-sold{cursor:default}
 .card.is-sold:hover,.card.is-sold:active{transform:none;box-shadow:none}
