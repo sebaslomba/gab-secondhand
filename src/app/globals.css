@@ -62,6 +62,9 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .hanger .ph .ph-img{object-position:center}
 .hanger .meta{padding:10px 14px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .hanger .meta b{font-family:var(--display);font-size:20px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hanger .sale-tag{position:absolute;left:10px;bottom:10px;z-index:3;background:#D7263D;color:#fff;border-radius:999px;padding:5px 11px;font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:.1em;text-transform:uppercase;box-shadow:0 4px 10px -4px rgba(142,19,36,.6)}
+.hanger .meta.is-sale b{color:#C21F35}
+.hanger .meta b s{font-size:13px;font-weight:600;color:var(--muted);margin-left:6px;letter-spacing:0}
 .hanger .meta small{color:var(--muted);white-space:nowrap;font-size:13px}
 @media (max-width:640px){.hanger{width:158px}.hanger .glass{border-radius:79px 79px 18px 18px}.hanger .meta{padding:8px 10px 12px}.hanger .meta b{font-size:17px}.hanger .meta small{font-size:12px}}
 @media (prefers-reduced-motion:reduce){.hanger{animation:none;transition:none}}

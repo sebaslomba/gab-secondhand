@@ -1,5 +1,5 @@
 "use client";
-import { gs } from "@/lib/data";
+import { enOferta, gs } from "@/lib/data";
 import { Garment } from "./Garment";
 import { useStore } from "./Store";
 
@@ -14,8 +14,9 @@ export function Rack() {
           <button key={it.id} className="hanger" style={{ ["--i" as string]: k }} onClick={() => open(it.id)}
             aria-label={`${it.t}, talle ${it.s}, ${gs(it.p)} guaraníes`}>
             <div className="glass">
-              <div className="ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} /></div>
-              <div className="meta"><b>{gs(it.p)}</b><small>Talle {it.s}</small></div>
+              <div className="ph" style={{ ["--tint" as string]: it.bg }}><Garment it={it} />
+                {enOferta(it) && <span className="sale-tag">Oferta</span>}</div>
+              <div className={`meta${enOferta(it) ? " is-sale" : ""}`}><b>{gs(it.p)}{enOferta(it) && <s>{gs(it.pa!)}</s>}</b><small>Talle {it.s}</small></div>
             </div>
           </button>
         ))}
