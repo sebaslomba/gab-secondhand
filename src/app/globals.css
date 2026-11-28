@@ -676,8 +676,8 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 @media (max-width:420px){.env-est{gap:5px;padding:0 14px 14px}.env-est button{font-size:11.5px;flex-direction:column;gap:3px;min-height:46px}}
 
 /* ---- WhatsApp flotante (todas las páginas de la tienda). "Arriba" queda encima de este botón. ---- */
-.wa-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#25D366;color:#fff;box-shadow:0 2px 4px rgba(62,39,35,.12),0 12px 28px -10px rgba(18,140,74,.7);transition:transform .2s var(--ios),background .2s}
-.wa-fab:hover{background:#1EBE5A}
+.wa-fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:45;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--btn-bg);color:var(--btn-fg);border:1px solid rgba(62,39,35,.12);box-shadow:0 2px 4px rgba(62,39,35,.1),0 12px 28px -12px rgba(201,113,142,.9);transition:transform .2s var(--ios),background .2s}
+.wa-fab:hover{background:var(--btn-hover)}
 .wa-fab:active{transform:scale(.92)}
 .wa-fab svg{width:30px;height:30px}
 @media print{.wa-fab{display:none}}

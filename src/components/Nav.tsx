@@ -3,9 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BagIcon, CartIcon, WhatsAppIcon } from "./Icons";
+import { BagIcon, CartIcon } from "./Icons";
 import { useStore } from "./Store";
-import { waLink } from "@/lib/data";
 
 export function Nav() {
   const path = usePathname();
@@ -37,11 +36,6 @@ export function Nav() {
             <CartIcon />
             {n > 0 && <span className="badge" key={bump}>{n}</span>}
           </button>
-        )}
-        {!admin && (
-          <a className="wa" href={waLink("Hola Gab!")} target="_blank" rel="noopener">
-            <WhatsAppIcon /><span>Escribinos</span>
-          </a>
         )}
       </div>
     </header>
