@@ -265,8 +265,8 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 .admin-head p{margin:4px 0 0;color:var(--muted)}
 .sample{font-size:13px;background:var(--petal);color:#3E2723;border-radius:999px;padding:5px 12px;font-weight:600}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:28px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;min-width:0;container-type:inline-size}
-.kpi small{color:var(--muted);font-size:13px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;min-width:0;container-type:inline-size;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;text-align:left}
+.kpi small{display:block;line-height:1.35;color:var(--muted);font-size:13px}
 .kpi b{display:block;white-space:nowrap;font-family:var(--display);font-size:clamp(15px,10.5cqi,30px);letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:4px}
 .kpi.main{background:var(--petal);border-color:transparent}
 .kpi.main small{color:var(--muted)}
