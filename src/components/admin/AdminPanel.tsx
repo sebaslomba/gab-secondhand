@@ -12,6 +12,7 @@ import { Segmented } from "@/components/Segmented";
 import { useStore } from "@/components/Store";
 import { ChevronIcon } from "@/components/Icons";
 import { Filters } from "@/components/Filters";
+import { EditorFoto, type Ajustes } from "@/components/admin/EditorFoto";
 import { Direccion, Envios, PrendasPedido, quien, type PedidoEnvio } from "@/components/admin/Envios";
 
 type FilaPrenda = {
@@ -429,6 +430,24 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
   const [subiendo, setSubiendo] = useState(0);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  // Foto abierta en el editor. Si ya se editó en esta carga, se vuelve a abrir la original con los ajustes anteriores.
+  const [editando, setEditando] = useState<number | null>(null);
+  const [ediciones, setEdiciones] = useState<Record<string, { original: string; ajustes: Ajustes }>>({});
+  const subirBlob = async (blob: Blob) => {
+    const ruta = `prendas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error } = await sb.storage.from("fotos").upload(ruta, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+    if (error) throw error;
+    return sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl;
+  };
+  const guardarEdicion = async (i: number, blob: Blob, ajustes: Ajustes) => {
+    const vieja = fotos[i];
+    const url = await subirBlob(blob);
+    const original = ediciones[vieja]?.original ?? vieja;
+    setEdiciones(x => ({ ...x, [url]: { original, ajustes } }));
+    setFotos(x => x.map(y => (y === vieja ? url : y)));
+    setEditando(null);
+  };
+  const cerrarEditor = useCallback(() => setEditando(null), []);
   const subir = async (archivos: FileList | null) => {
     if (!archivos?.length) return;
     setError("");
@@ -436,11 +455,7 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
     setSubiendo(n => n + lista.length);
     for (const a of lista) {
       try {
-        const blob = await comprimir(a);
-        const ruta = `prendas/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-        const { error } = await sb.storage.from("fotos").upload(ruta, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
-        if (error) throw error;
-        const url = sb.storage.from("fotos").getPublicUrl(ruta).data.publicUrl;
+        const url = await subirBlob(await comprimir(a));
         setFotos(x => [...x, url]);
       } catch {
         setError("No se pudo subir una foto. Si es la primera vez, falta correr supabase/fotos.sql en Supabase.");
@@ -491,7 +506,10 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
           {fotos.map((u, i) => (
             <div key={u} className={`fotos-item${i === 0 ? " portada" : ""}`}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={u} alt={`Foto ${i + 1}`} />
+              <img src={u} alt={`Foto ${i + 1}`} onClick={() => setEditando(i)} />
+              <button type="button" className="fotos-editar" aria-label={`Editar foto ${i + 1}`} title="Editar foto" onClick={() => setEditando(i)}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
+              </button>
               <button type="button" className="fotos-x" aria-label={`Quitar foto ${i + 1}`} onClick={() => setFotos(x => x.filter(y => y !== u))}>×</button>
               {i > 0 && <button type="button" className="fotos-portada" onClick={() => setFotos(x => [u, ...x.filter(y => y !== u)])}>Portada</button>}
             </div>
@@ -503,6 +521,15 @@ function PrendaForm({ filas, prenda, onListo, onCancelar }: {
           </label>
         </div>
       </div>
+      {editando !== null && fotos[editando] && (
+        <EditorFoto
+          key={fotos[editando]}
+          src={ediciones[fotos[editando]]?.original ?? fotos[editando]}
+          inicial={ediciones[fotos[editando]]?.ajustes}
+          onCancelar={cerrarEditor}
+          onGuardar={(blob, aj) => guardarEdicion(editando, blob, aj)}
+        />
+      )}
       <label>¿Qué es?<input required value={f.titulo} onChange={set("titulo")} placeholder="Ej: Campera de jean oversize" /></label>
       <div className="two">
         <label>Precio (Gs.)<input required inputMode="numeric" value={f.precio} onChange={money("precio")} placeholder="120.000" /></label>
